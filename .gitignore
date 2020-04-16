@@ -1,0 +1,7 @@
+*.pyc
+
+lib/__pycache__
+pseudo-assemblies/
+job-scripts/
+scripts/
+
