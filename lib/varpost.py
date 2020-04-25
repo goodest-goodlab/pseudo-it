@@ -25,12 +25,16 @@ def selectSNPs(vcffile, cur_ref, globs):
 def varFilter(filter_item):
 # Run the command to filter variants from a VCF file based on input filters. Default: "MQ < 30.0 || DP < 5 || DP > 60"
     vcffile, vcfdir, logdir, cur_ref, globs = filter_item;
+    indel_suffix = "";
+    if globs['iteration'] == globs['num-iters'] and not globs['indels']:
+        indel_suffix = "-noindels"
     
     if globs['iteration'] != globs['num-iters'] or globs['num-procs'] == 1:
-        cur_logfile = os.path.join(globs['logdir'], "gatk-varfilter-snps-iter-" + globs['iter-str'] + ".log");
-        filter_vcffile = os.path.join(globs['iterdir'], "iter-" + globs['iter-str'] + "-filtered.vcf.gz");
+        cur_logfile = os.path.join(globs['logdir'], "gatk-varfilter-snps-iter-" + globs['iter-str'] + indel_suffix + ".log");
+        filter_vcffile = os.path.join(globs['iterdir'], "iter-" + globs['iter-str'] + "-filtered" + indel_suffix + ".vcf.gz");
     else:
         scaff = os.path.basename(vcffile);
+        print("AHHHHHHHHHHH:" + scaff);
         scaff = scaff[:scaff.index("-iter")];
         cur_logfile = os.path.join(logdir, "gatk-varfilter-" + scaff + "-iter-" + globs['iter-str'] + ".log");
         filter_vcffile = os.path.join(vcfdir, scaff + "-iter-" + globs['iter-str'] + "-filtered.vcf.gz");
@@ -97,10 +101,13 @@ def fixHeaders(fafile, globs):
 
         # cmd = "sed -f " + sed_file + " < " + fafile + " > " + fa_fixed;
 
-        cmd = "sed 's/>[0-9]* />/g; s/:1-[0-9]*//g' " + fafile + " > " + fa_fixed
+        cmd = "sed 's/>[0-9]* />/g; s/:1-[0-9]*//g' " + fafile + " > " + fa_fixed;
 
-        PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : " + cmd);
-        os.system(cmd);
+        if globs['dryrun']:
+            PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Would execute   : " + cmd);
+        else:
+            PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : " + cmd);
+            os.system(cmd);
 
     else:
         PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# Fixed FASTA already exists", globs['pad'], sep=".") + fa_fixed + "\n");
@@ -110,17 +117,18 @@ def fixHeaders(fafile, globs):
 #############################################################################
 
 def getMask(vcffile, globs):
-# Fix the headers from the consensus FASTA file.
+# Get the sites to be masked into a bed file.
     maskfile = os.path.join(globs['iterdir'], "iter-" + globs['iter-str'] + "-masksites.bed");
     exit_flag = False;
 
     if not os.path.isfile(maskfile) or globs['overwrite']:
         #cmd = "zgrep \"\./\.\" " + vcffile + " > " + maskfile;
         cmd = "zgrep \"\./\.\" " + vcffile + " | awk '{{OFS=\"\t\"; if ($0 !~ /\#/); print $1, $2-1, $2}}' | bedtools merge -i - > " + maskfile;
-        #print(vcffile);
-
-        PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : " + cmd);
-        os.system(cmd);
+        if globs['dryrun']:
+            PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Would execute   : " + cmd);
+        else:
+            PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : " + cmd);
+            os.system(cmd);
     else:
         PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# Mask sites file already exists", globs['pad'], sep=".") + maskfile + "\n");
 
@@ -147,43 +155,67 @@ def maskFa(maskbed, cur_ref, globs):
 #############################################################################
 
 def rmNonRef(vcffile, globs):
+# Deals with the weird <NON_REF> alleles in gatk's new GVCF format.
     vcffile_decom = vcffile.replace(".gz", "");
 
     cmd = "gunzip " + vcffile;
-    PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : " + cmd);
-    os.system(cmd);
+    if globs['dryrun']:
+        PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Would execute   : " + cmd);
+    else:
+        PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : " + cmd);
+        os.system(cmd);
 
     cmd = "sed -i 's/,<NON_REF>//g;s/<NON_REF>/./g;' " + vcffile_decom;
-    PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : " + cmd);
-    os.system(cmd);
+    if globs['dryrun']:
+        PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Would execute   : " + cmd);
+    else:
+        PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : " + cmd);
+        os.system(cmd);
 
-    cmd = "bgzip " + vcffile_decom;    
-    PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : " + cmd);
-    os.system(cmd);
+    cmd = "bgzip " + vcffile_decom;
+    if globs['dryrun']:
+        PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Would execute   : " + cmd);
+    else:
+        PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : " + cmd);
+        os.system(cmd);
 
 #############################################################################
 
 def finalConsensus(vcffile, cur_ref, globs):
 # Run the command to generate a consensus FASTA file from the reference and the variants.
-    cur_logfile = os.path.join(globs['logdir'], "bcftools-consensus-iter-" + globs['iter-str'] + ".log");
-    chain_file = os.path.join(globs['iterdir'], "iter-" + globs['iter-str'] + "-indels-final.chain");
-    consensus_file = os.path.join(globs['iterdir'], "iter-" + globs['iter-str'] + "-indels-final.fa");
+    if globs['indels']:
+        suffix = "-indels";
+    else:
+        suffix = "-noindels"
 
-    first_lower, linestr_orig, linestr_repl = getConsCase(cur_ref);
-    # This first_lower stuff is a hack to deal with bcftools consensus using the case of the first base in the reference fasta to inject variants.
-    # Possibly resolved: https://github.com/samtools/bcftools/issues/1150#issuecomment-582407490
-    # Need to test and make sure it is in official release before I remove this hack.
+    cur_logfile = os.path.join(globs['logdir'], "bcftools-consensus-iter-" + globs['iter-str'] + suffix + ".log");
+    chain_file = os.path.join(globs['iterdir'], "iter-" + globs['iter-str'] + suffix + "-final.chain");
+    consensus_file = os.path.join(globs['iterdir'], "iter-" + globs['iter-str'] + suffix + "-final.fa");
+
+    if not globs['dryrun']:
+        first_lower, linestr_orig, linestr_repl = getConsCase(cur_ref);
+        # This first_lower stuff is a hack to deal with bcftools consensus using the case of the first base in the reference fasta to inject variants.
+        # Possibly resolved: https://github.com/samtools/bcftools/issues/1150#issuecomment-582407490
+        # Need to test and make sure it is in official release before I remove this hack.
+    else:
+        first_lower, linestr_orig, linestr_repl = True, "a", "A";
 
     if first_lower:
         cmd = "sed -i '2 s/" + linestr_orig + "/" + linestr_repl + "/g' " + cur_ref;
-        PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : sed to convert case of first ref char." );
-        os.system(cmd);
+        if globs['dryrun']:
+            PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Would execute   : sed to convert case of first ref char." );
+        else:
+            PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : sed to convert case of first ref char." );
+            os.system(cmd);
     # Part of first_lower hack.
 
     run_flag = PC.runCheck([consensus_file], cur_logfile, globs);
 
     if run_flag:
-        bcftools_cmd = globs['bcftools-path'] + " consensus -f " + cur_ref + " -o " + consensus_file + " -c " + chain_file + " -e \"FILTER='pseudoit'\" " + vcffile
+        bcftools_cmd = globs['bcftools-path'] + " consensus -f " + cur_ref + " -o " + consensus_file
+        if globs['indels']:
+            bcftools_cmd += " -c " + chain_file
+        bcftools_cmd += " -e \"FILTER='pseudoit'\" " + vcffile;
         exit_flag = PC.runCMD(bcftools_cmd, "bcftools consensus", cur_logfile, True, globs);
     else:
         PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# Consensus FASTA already exists", globs['pad'], sep=".") + consensus_file + "\n");
@@ -191,17 +223,25 @@ def finalConsensus(vcffile, cur_ref, globs):
     # Consensus command
 
     if first_lower:
-        first_lower, linestr_orig, linestr_repl = getConsCase(cur_ref);
+        if not globs['dryrun']:
+            first_lower, linestr_orig, linestr_repl = getConsCase(cur_ref);
 
         cmd = "sed -i '2 s/" + linestr_orig + "/" + linestr_repl + "/g' " + cur_ref;
-        PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : sed to revert case of first consensus char.");
-        os.system(cmd);        
+        if globs['dryrun']:
+            PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Would execute   : sed to revert case of first consensus char.");
+        else:
+            PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : sed to revert case of first consensus char.");
+            os.system(cmd);        
 
-        first_lower, linestr_orig, linestr_repl = getConsCase(consensus_file);
+        if not globs['dryrun']:
+            first_lower, linestr_orig, linestr_repl = getConsCase(consensus_file);
 
         cmd = "sed -i '2 s/" + linestr_orig + "/" + linestr_repl + "/g' " + consensus_file;
-        PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : sed to revert case of first ref char.");
-        os.system(cmd);
+        if globs['dryrun']:
+            PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Would execute   : sed to revert case of first ref char.");
+        else:
+            PC.printWrite(globs['logfilename'], globs['log-v'], "# " + PC.getDateTime() + " --> Executing   : sed to revert case of first ref char.");
+            os.system(cmd);
     # Part of first_lower hack.
 
     return consensus_file, exit_flag;

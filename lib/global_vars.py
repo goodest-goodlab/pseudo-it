@@ -63,6 +63,7 @@ def init():
         # User options
 
         'norun' : False,
+        'dryrun' : False,
         'continue' : False,
         'iteration' : 1,
         'pad' : 82,

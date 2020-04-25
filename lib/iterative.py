@@ -80,7 +80,7 @@ def mapping(globs, step_start_time):
         PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
         # HaplotypeCaller.
 
-        if globs['iteration'] == globs['num-iters'] and globs['indels']:
+        if globs['iteration'] == globs['num-iters']:
             lastIter(vcf_file, "", cur_ref, globs, step_start_time);
         # If this is the last iteration, go to those steps.
     # Serial version.
@@ -103,7 +103,7 @@ def mapping(globs, step_start_time):
         PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
         # HaplotypeCaller.
 
-        if globs['iteration'] == globs['num-iters'] and globs['indels']:
+        if globs['iteration'] == globs['num-iters']:
             pool.terminate();
             lastIter(vcf_dir, vcf_log_dir, cur_ref, globs, step_start_time);
         # If this is the last iteration, go to those steps.
@@ -124,7 +124,7 @@ def mapping(globs, step_start_time):
     ###
     ## Call variants.
 
-    if globs['iteration'] != globs['num-iters'] or not globs['indels']:
+    if globs['iteration'] != globs['num-iters']:
     # Only do these steps if its not the last iteration.
         step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Select SNPs", step_start=step_start_time);
         vcf_snp_file, exit_flag = varpost.selectSNPs(vcf_file, cur_ref, globs);
@@ -213,7 +213,16 @@ def lastIter(gvcf, gvcf_log, cur_ref, globs, step_start_time):
     ###
     ## Genotype variants.
 
-    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Index VCF", step_start=step_start_time);
+    # step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Remove <NON_REF>", step_start=step_start_time);
+    # varpost.rmNonRef(vcf_file, globs);
+    # PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
+    # # Because of a bug in GenotypeGVCFs, some of the weird <NON_REF> alleles remain in the final VCF. This messes up bcftools consensus.
+    # # This hack removes the <NON_REF>s.
+    # # Supposedly this will be fixed in the next GATK release:
+    # # https://gatk.broadinstitute.org/hc/en-us/community/posts/360056352871-Some-NON-REF-alleles-remain-after-GenotypeGVCFs-when-using-include-non-variant-sites
+    ### They seem to have fixed this in version 4.1.5.0
+
+    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Index filtered VCF", step_start=step_start_time);
     exit_flag = varcall.indexVCF(vcf_file, globs, suffix="filtered");
     PC.exitCheck(exit_flag, globs);
     PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
@@ -225,19 +234,24 @@ def lastIter(gvcf, gvcf_log, cur_ref, globs, step_start_time):
     PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
     # Get mask sites from final VCF.
 
-    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Mask FASTA", step_start=step_start_time);
+    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Mask previous iteration FASTA", step_start=step_start_time);
     mask_fa, exit_flag = varpost.maskFa(mask_bed, cur_ref, globs);
     PC.exitCheck(exit_flag, globs);
     PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
     # Mask the current (last iteration) reference FASTA.
 
-    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Remove <NON_REF>", step_start=step_start_time);
-    varpost.rmNonRef(vcf_file, globs);
-    PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-    # Because of a bug in GenotypeGVCFs, some of the weird <NON_REF> alleles remain in the final VCF. This messes up bcftools consensus.
-    # This hack removes the <NON_REF>s.
-    # Supposedly this will be fixed in the next GATK release:
-    # https://gatk.broadinstitute.org/hc/en-us/community/posts/360056352871-Some-NON-REF-alleles-remain-after-GenotypeGVCFs-when-using-include-non-variant-sites
+    if not globs['indels']:
+        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Select SNPs", step_start=step_start_time);
+        vcf_file, exit_flag = varpost.selectSNPs(vcf_file, cur_ref, globs);
+        PC.exitCheck(exit_flag, globs);
+        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
+        # Select SNPs only.
+
+        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Index filtered SNP VCF", step_start=step_start_time);
+        exit_flag = varcall.indexVCF(vcf_file, globs, suffix="filtered-snps");
+        PC.exitCheck(exit_flag, globs);
+        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
+        # Index the filtered VCF SNP file.
 
     step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Generate final FASTA", step_start=step_start_time);
     mask_fa, exit_flag = varpost.finalConsensus(vcf_file, mask_fa, globs);

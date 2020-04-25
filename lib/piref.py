@@ -7,11 +7,14 @@ def getScaffs(cur_fa, globs, step_start_time, report_status=True):
 # Save the list of scaffolds/contigs/chromosomes from a FASTA file to a text file.
     if report_status:
         step_start_time = PC.report_stats(globs, "PREP: Get scaffold IDs", step_start=step_start_time);
-    cmd = "grep  \">\" " + cur_fa + " | sed 's/>//g'"# > " + globs['scaffs']; 
-    cmd_result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE);
-    cur_scaffs = list(filter(None, cmd_result.stdout.decode().split("\n")));
-    cur_scaffs = [ scaff[:scaff.index(" ")] if " " in scaff else scaff for scaff in cur_scaffs ];
-    return cur_scaffs, step_start_time;
+    if not globs['dryrun']:
+        cmd = "grep  \">\" " + cur_fa + " | sed 's/>//g'"# > " + globs['scaffs']; 
+        cmd_result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE);
+        cur_scaffs = list(filter(None, cmd_result.stdout.decode().split("\n")));
+        cur_scaffs = [ scaff[:scaff.index(" ")] if " " in scaff else scaff for scaff in cur_scaffs ];
+        return cur_scaffs, step_start_time;
+    else:
+        return [], step_start_time
 
 #############################################################################
 

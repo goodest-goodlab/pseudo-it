@@ -50,6 +50,7 @@ def optParse(globs):
 	parser.add_argument("--version", dest="version_flag", help="Simply print the version and exit. Can also be called as '-version', '-v', or '--v'", action="store_true", default=False);
 	# User options
 	parser.add_argument("--norun", dest="norun", help=argparse.SUPPRESS, action="store_true", default=False);
+	parser.add_argument("--dryrun", dest="dryrun", help=argparse.SUPPRESS, action="store_true", default=False);
 	parser.add_argument("--debug", dest="debug_opt", help=argparse.SUPPRESS, action="store_true", default=False);
 	parser.add_argument("--nolog", dest="nolog_opt", help=argparse.SUPPRESS, action="store_true", default=False);
 	# Performance tests
@@ -59,6 +60,8 @@ def optParse(globs):
 	if args.norun:
 		globs['norun'] = True;
 		globs['log-v'] = -1;
+	if args.dryrun:
+		globs['dryrun'] = True;
 	globs['overwrite'] = args.ow_flag;
 
 	if not any([args.se, args.pe1, args.pe2, args.pem]):
@@ -118,6 +121,8 @@ def optParse(globs):
 			os.system("mkdir " + globs['tmpdir']);
 
 	globs['logfilename'] = os.path.join(globs['outdir'], os.path.basename(os.path.normpath(globs['outdir'])) + ".log");
+	if globs['dryrun']:
+		globs['logfilename'] = globs['logfilename'].replace(".log", "-dryrun.log");
 	globs['scaffs'] = os.path.join(globs['outdir'], "scaffold-list.txt");
 	globs['endprog'] = True;
 	# Output prep.
@@ -264,12 +269,12 @@ def startProg(globs):
 	# Reporting the resume option.
 
 	if globs['indels']:
-		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --noindels FALSE", pad) + 
-					PC.spacedOut(str(globs['num-iters']), opt_pad) + 
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --noindels", pad) + 
+					PC.spacedOut("False", opt_pad) + 
 					"Final assembly will incorporate indels.");
 	else:
-		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --noindels TRUE", pad) + 
-					PC.spacedOut(str(globs['num-iters']), opt_pad) + 
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --noindels", pad) + 
+					PC.spacedOut("True", opt_pad) + 
 					"Final assembly will NOT incorporate indels.");		
 	# Reporting --noindels option.
 

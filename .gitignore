@@ -1,4 +1,5 @@
 *.pyc
+*test*
 
 lib/__pycache__
 pseudo-assemblies/
