@@ -34,6 +34,8 @@ def mergeBam(bamfiles, globs):
         merge_cmd = globs['picard-path'] + " MergeSamFiles ";
         for bam in bamfiles:
             merge_cmd += "I=" + bam + " ";
+        if globs['tmpdir'] != "System default.":
+            merge_cmd += "TMP_DIR=\"" + globs['tmpdir'] + "\" ";
         merge_cmd += "USE_THREADING=TRUE VALIDATION_STRINGENCY=LENIENT O=" + merged_bamfile;
         exit_flag = PC.runCMD(merge_cmd, "BWA merge", cur_logfile, True, globs);
     else:
