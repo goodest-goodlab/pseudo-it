@@ -150,19 +150,22 @@ def runCMD(cmd, cmd_str, cmd_log, report_success, globs):
 	if not globs['dryrun']:
 		printWrite(globs['logfilename'], globs['log-v'], "# " + getDateTime() + " --> Executing   : " + cmd);
 		cmd_result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE);
-		if any(ecode in cmd_result.stderr.decode() for ecode in ['error', 'Error', 'ERROR', 'Exception', 'Could not build fai index', 
-																	'AssertionError', "Can't read file", "Killed", "No such file or directory", 
-																	"Symbolic alleles other than <DEL> are currently not supported",
-																	"Failed to open", "The index file is older than the data file"]):
+		cmd_stdout = cmd_result.stdout.decode();
+		cmd_stderr = cmd_result.stderr.decode();
+		cmd_output = cmd_stdout + "\n\n" + cmd_stderr;
+		if any(ecode in cmd_output for ecode in ['error', 'Error', 'ERROR', 'Exception', 'Could not build fai index', 
+																'AssertionError', "Can't read file", "Killed", "No such file or directory", 
+																"Symbolic alleles other than <DEL> are currently not supported",
+																"Failed to open", "The index file is older than the data file"]):
 			printWrite(globs['logfilename'], globs['log-v'], "\n# " + getDateTime() + " * CMD ERROR: The following command returned an error:\n\n");
 			printWrite(globs['logfilename'], globs['log-v'], cmd);
 			printWrite(globs['logfilename'], globs['log-v'], "\n\nPlease check the log file for more info: " + cmd_log + "\n");
 			printWrite(cmd_log, 3, "CMD:");
 			printWrite(cmd_log, 3, cmd + "\n");
 			printWrite(cmd_log, 3, "STDOUT output:");
-			printWrite(cmd_log, 3, cmd_result.stdout.decode() + "\n");
+			printWrite(cmd_log, 3, cmd_stdout + "\n");
 			printWrite(cmd_log, 3, "STDERR output:");
-			printWrite(cmd_log, 3, cmd_result.stderr.decode() + "\n");
+			printWrite(cmd_log, 3, cmd_stderr + "\n");
 			#endProg(globs);
 			return True;
 		elif report_success:
@@ -172,9 +175,9 @@ def runCMD(cmd, cmd_str, cmd_log, report_success, globs):
 			printWrite(cmd_log, 3, "CMD:");
 			printWrite(cmd_log, 3, cmd + "\n");
 			printWrite(cmd_log, 3, "STDOUT output:");
-			printWrite(cmd_log, 3, cmd_result.stdout.decode() + "\n");
+			printWrite(cmd_log, 3, cmd_stdout + "\n");
 			printWrite(cmd_log, 3, "STDERR output:");
-			printWrite(cmd_log, 3, cmd_result.stderr.decode() + "\n");
+			printWrite(cmd_log, 3, cmd_stderr + "\n");
 			printWrite(cmd_log, 3, "PSEUDOIT SUCCESS!");
 			return False;
 		else:

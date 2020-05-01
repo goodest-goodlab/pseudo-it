@@ -40,7 +40,7 @@ def optParse(globs):
 	parser.add_argument("-i", dest="num_iters", help="The number of iterations Pseudo-it will run. Default: 4.", default=False);
 	parser.add_argument("-bwa-t", dest="bwa_threads", help="The number of threads for BWA mem to use for each library. If you specify -bwa-t 3 and have 3 libraries (and have at least -p 3), this means a total of 9 processes will be used during mapping. If left unspecified and -p is specified this will be determined automatically by dividing -p by the number of libraries you provide. Otherwise, default: 1.", default=False);
 	parser.add_argument("-gatk-t", dest="gatk_threads", help="The number of threads for GATK's Haplotype caller to use. If you specify -p 4 and -gatk-t 4, this means that a total of 16 processes will be used. GATK default: 4.", default=False);
-	parser.add_argument("-heap", dest="java_heap", help="The heap size to allot for called java programs (picard). Enter an integer, assumed unit is gigabytes (g). Default: System default.", default=False);
+	# parser.add_argument("-heap", dest="java_heap", help="The heap size to allot for called java programs (picard). Enter an integer, assumed unit is gigabytes (g). Default: System default.", default=False);
 	parser.add_argument("-f", dest="filter", help="The expression to filter variants. Must conform to VCF INFO field standards. Default: \"MQ < 30.0 || DP < 5 || DP > 60\"", default=False);
 	parser.add_argument("-p", dest="processes", help="The number of processes Pseudo-it should use. Default: 1.", default=False);
 	# User params
