@@ -6,8 +6,8 @@ import sys, timeit, lib.picore as PC
 def init():
     globs = {
         
-        'version' : 'Beta 2.0',
-        'releasedate' : 'December 07, 2019',
+        'version' : 'Beta 3.1',
+        'releasedate' : 'August 13, 2020',
         'doi' : 'https://doi.org/10.1093/gbe/evx034',
         'http' : 'https://github.com/bricesarver/pseudo-it',
         'github' : 'https://github.com/bricesarver/pseudo-it/issues',
