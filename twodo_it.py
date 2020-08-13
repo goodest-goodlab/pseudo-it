@@ -24,6 +24,7 @@ def pseudoit(globs):
 
 if __name__ == '__main__':
 # Main is necessary for multiprocessing to work on Windows.
+
 	globs = GV.init();
 	
 	if any(v in sys.argv for v in ["--version", "-version", "--v", "-v"]):

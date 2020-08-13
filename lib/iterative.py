@@ -1,7 +1,7 @@
 # Iterative mapping steps for Pseudo-it
 #############################################################################
 import sys, os, shutil, subprocess, lib.picore as PC, lib.piref as piref, \
-    lib.pimap as pimap, lib.varprep as varprep, multiprocessing as mp, \
+    lib.pimap as pimap, multiprocessing as mp, \
     lib.varcall as varcall, lib.varpost as varpost, lib.consensus as con
 #############################################################################
 
