@@ -1,0 +1,16 @@
+# These are the major changes and updates. For build specific changes (which are too numerous to document manually), check the commits on github.
+
+# TODO:
+
+# IN DEVELOPMENT:
+01) Need a better way to specify read groups for mapping
+
+# CURRENT:
+# Version beta 3.1: August 13, 2020
+01) Major restructure and streamlining of the code
+
+# PREVIOUS:
+# Version beta 2.1: December 09, 2019
+01) Restructure of code from previous versions
+02) Implemented split variant calling by scaffold to make HaplotypeCaller feasible
+03) Use bcftools consensus for final sequence to incorporate indels
