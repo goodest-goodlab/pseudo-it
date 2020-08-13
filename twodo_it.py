@@ -13,22 +13,13 @@ import sys, os, multiprocessing as mp, shutil, lib.picore as PC, \
 
 #############################################################################
 
-def pseudoit(globs, step_start_time):
-
-	if globs['psutil']:
-		import psutil
-	step_start_time = PC.report_stats(globs, "Starting", step_start=step_start_time);
-	# Initialize the stats output if --stats is set.
+def pseudoit(globs):
 
 	while globs['iteration'] <= globs['num-iters']:
-		globs, step_start_time = iterative.mapping(globs, step_start_time);
+		globs = iterative.mapping(globs);
 	# Call the mapping function for each iteration.
 
-	if globs['stats']:
-		step_start_time = PC.report_stats(globs, "End program", step_start=step_start_time, stat_end=True);
-	# A step update for --stats.
-
-	return;
+	return globs;
 #############################################################################
 
 if __name__ == '__main__':
@@ -40,18 +31,19 @@ if __name__ == '__main__':
 	# The version option to simply print the version and exit.
 
 	print("#");
-	print("# " + "=" * 100);
+	print("# " + "=" * 125);
 	print(PC.welcome());
-	print("       Pseudo assembly by iterative mapping.\n")
+	if "-h" not in sys.argv:
+		print("       Pseudo assembly by iterative mapping.\n");
 	# A welcome banner.
 
-	globs, step_start_time = OP.optParse(globs);
+	globs = OP.optParse(globs);
 	# Getting the input parameters from optParse.
 
 	if globs['norun']:
 		sys.exit("# --norun SET. EXITING AFTER PRINTING OPTIONS INFO...\n#");
 
-	pseudoit(globs, step_start_time);
+	globs = pseudoit(globs);
 	PC.endProg(globs);
 
 #############################################################################

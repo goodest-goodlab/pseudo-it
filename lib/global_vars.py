@@ -5,7 +5,7 @@ import sys, timeit, lib.picore as PC
 
 def init():
     globs = {
-        'pyver' :  ".".join(map(str, sys.version_info[:3])),
+        
         'version' : 'Beta 2.0',
         'releasedate' : 'December 07, 2019',
         'doi' : 'https://doi.org/10.1093/gbe/evx034',
@@ -14,6 +14,12 @@ def init():
         'starttime' : timeit.default_timer(),
         'startdatetime' : PC.getOutTime(),
         # Meta info
+
+        'pyver' :  ".".join(map(str, sys.version_info[:3])),
+        # System info
+
+        'call' : "",
+        # Script call info
 
         'ref' : False,
         'scaffs' : False,
@@ -29,10 +35,17 @@ def init():
 
         'indir' : '',
         'outdir' : '',
+        'sample-name' : '',
         'logfilename' : 'pseudo-it.errlog',
         'logdir' : '',
         'tmpdir' : 'System default.',
-        # I/O stuff
+        'indels' : True,
+        'diploid' : False,
+        'resume' : False,
+        'overwrite' : False,
+        'final' : False,
+        'keeplevel' : 1,
+        # I/O options
         
         'bwa-path' : 'bwa',
         'picard-path' : 'picard',
@@ -46,28 +59,26 @@ def init():
         # Number of threads for BWA mem to use.
 
         'gatk-t' : 4,
-        # Number of threads for GATK's --native-pair-hmm-threads option.     
-
-        'heap' : 'System default.',
-        # Heap size for java programs (picard).
+        'gvcf-procs' : 1,
+        # Number of threads for GATK's --native-pair-hmm-threads option and the number of procs
+        # to use for GenotypeGVCFs.
 
         'filter' : '"MQ < 30.0 || FORMAT/DP < 5 || FORMAT/DP > 60"',
         # Variant filtration string default
 
-        'indels' : True,
-        'resume' : False,
-        'overwrite' : False,
         'num-procs' : 1,
         'num-iters' : 4,
         'quiet' : False,
-        # User options
+        # Other user options
 
         'norun' : False,
         'dryrun' : False,
         'continue' : False,
         'iteration' : 1,
+        'map-only' : False,
         'pad' : 82,
         'endprog' : False,
+        'exit-code' : 0,
         'log-v' : 1,
         'stats' : True,
         'progstarttime' : 0,

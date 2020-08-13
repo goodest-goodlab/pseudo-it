@@ -1,262 +1,271 @@
 # Iterative mapping steps for Pseudo-it
 #############################################################################
-import sys, os, subprocess, lib.picore as PC, lib.piref as piref, \
+import sys, os, shutil, subprocess, lib.picore as PC, lib.piref as piref, \
     lib.pimap as pimap, lib.varprep as varprep, multiprocessing as mp, \
-    lib.varcall as varcall, lib.varpost as varpost
+    lib.varcall as varcall, lib.varpost as varpost, lib.consensus as con
 #############################################################################
 
-def mapping(globs, step_start_time):
+def mapping(globs):
 
     globs = PC.getIterStr(globs);
-    pool = mp.Pool(processes=globs['num-procs']);
+    PC.printWrite(globs['logfilename'], globs['log-v'], "#\n# " + "=" * 51 + " ITERATION " + globs['iter-str'] + " STARTING! " + "=" * 50);
+
+    globs['iterstarttime'] = PC.report_step(globs, "", start=True);
+    if globs['iteration'] == 1:
+        globs['progstarttime'] = globs['iterstarttime'];
+
+    cmds = {};
+    
     cur_ref = PC.getRef(globs);
+    globs['last-iter'] = False;
+    if globs['iteration'] == globs['num-iters']:
+        globs['last-iter'] = True;
     # Iteration prep
 
     globs['iterdir'] = os.path.join(globs['outdir'], "iter-" + globs['iter-str']);
-    if not os.path.isdir(globs['iterdir']):
-        os.makedirs(globs['iterdir']);
-    # Make directory for current iteration.
-
-    if globs['iteration'] == 1:
-        globs['scaffolds'], step_start_time = piref.getScaffs(globs['ref'], globs, step_start_time);
-
-        piref.indexCheck(globs['ref'], globs);
-    # Get the scaffold IDs from the reference FASTA and check that all index files have been created.
-
-    if globs['iteration'] != 1:
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Prep FASTA", step_start=step_start_time);
-        for result in pool.imap(piref.indexDistributor, ((index_opt, cur_ref, globs, step_start_time) for index_opt in ['dict', 'faidx', 'index'])):
-            step_start_time, exit_flag = result;
-            if exit_flag:
-                pool.terminate();
-                PC.endProg(globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-    # Prepare the current reference FASTA -- indexes with samtools, bwa, and creates picard dictionary.
-
-    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Mapping", step_start=step_start_time);
-    cur_bamfiles = [];
-    for result in pool.imap(pimap.BWA, ((cur_lib, globs['libs'][cur_lib], cur_ref, globs, step_start_time) for cur_lib in globs['libs'])):
-        exit_flag = result[1];
-        if exit_flag:
-            pool.terminate();
-            PC.endProg(globs);
-        cur_bamfiles.append(result[0]);
-    PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-    # Map reads in parallel for all given libraries.
-
-    if len(cur_bamfiles) > 1:
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": BAM Merging", step_start=step_start_time);    
-        merged_bamfile, exit_flag = pimap.mergeBam(cur_bamfiles, globs);
-        PC.exitCheck(exit_flag, globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
+    globs['iterbamdir'] = os.path.join(globs['iterdir'], "bam");
+    globs['itervcfdir'] = os.path.join(globs['iterdir'], "vcf");
+    globs['itervcfdir'] = os.path.join(globs['iterdir'], "vcf");
+    globs['iterfadir'] = os.path.join(globs['iterdir'], "fa");
+    globs['iterlogdir'] = os.path.join(globs['iterdir'], "logs");
+    for d in [ globs['iterdir'], globs['iterbamdir'], globs['itervcfdir'], globs['iterfadir'], globs['iterlogdir'] ]:
+        if not os.path.isdir(d):
+            os.makedirs(d);
+    if globs['last-iter']:
+        globs['itervcfscaffdir'] = os.path.join(globs['itervcfdir'], "gvcf-scaff");
+        globs['itervcflogdir'] = os.path.join(globs['itervcfdir'], "gvcf-logs");
     else:
-        merged_bamfile = cur_bamfiles[0];
-    # Merge BAM files if more than one library.
-   
+        globs['itervcfscaffdir'] = os.path.join(globs['itervcfdir'], "vcf-scaff");
+        globs['itervcflogdir'] = os.path.join(globs['itervcfdir'], "vcf-logs");
+    for d in [ globs['itervcfscaffdir'], globs['itervcflogdir'] ]:
+        if not os.path.isdir(d):
+            os.makedirs(d);
+    # Make directories for current iteration
 
-    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Add Read groups", step_start=step_start_time);
-    rg_bamfile, exit_flag = varprep.addRG(merged_bamfile, globs);
-    PC.exitCheck(exit_flag, globs);
-    PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-    # Add read groups.
+    globs['iter-final-bam-log'] = os.path.join(globs['iterlogdir'], "picard-mkdup-iter-" + globs['iter-str'] + ".log");
+    globs['iter-final-bam'] = os.path.join(globs['iterbamdir'], "merged-rg-mkdup-iter-" + globs['iter-str'] + ".bam.gz");
+    # Final BAM file for this iteration
 
-    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Mark duplicates", step_start=step_start_time);
-    dup_bamfile, exit_flag = varprep.markDups(rg_bamfile, globs);
-    PC.exitCheck(exit_flag, globs);
-    PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-    # Mark duplicates.
 
-    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Index BAM", step_start=step_start_time);
-    exit_flag = varprep.indexBAM(dup_bamfile, globs);
-    PC.exitCheck(exit_flag, globs);
-    PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-    # Index BAM file.
+    if globs['last-iter']:
+        globs['iter-gather-vcf-log'] = os.path.join(globs['iterlogdir'], "gatk-gathervcfs-iter-" + globs['iter-str'] + ".log");
+        globs['iter-gather-vcf'] = os.path.join(globs['itervcfdir'], "iter-" + globs['iter-str'] + "-filter.vcf.gz");
 
-    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": HaplotypeCaller", step_start=step_start_time);
-    if globs['num-procs'] == 1 or len(globs['scaffolds']) == 1:
-        vcf_file, exit_flag = varcall.haplotypeCaller(dup_bamfile, cur_ref, globs);
-        PC.exitCheck(exit_flag, globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        # HaplotypeCaller.
-
-        if globs['iteration'] == globs['num-iters']:
-            lastIter(vcf_file, "", cur_ref, globs, step_start_time);
-        # If this is the last iteration, go to those steps.
-    # Serial version.
-    ###
+        if globs['indels']:
+            globs['iter-final-vcf-log'] = globs['iter-gather-vcf-log'];
+            globs['iter-final-vcf'] = globs['iter-gather-vcf'];
+        else:
+            globs['iter-final-vcf-log'] = os.path.join(globs['iterlogdir'], "gatk-selectsnps-iter-" + globs['iter-str'] + ".log");
+            globs['iter-final-vcf'] = os.path.join(globs['itervcfdir'], "iter-" + globs['iter-str'] + "-filter-snps.vcf.gz");
     else:
-        PC.printWrite(globs['logfilename'], globs['log-v'], "# --> Running " + str(globs['num-procs']) + " scaffolds in parallel.");
-        vcf_dir = os.path.join(globs['iterdir'], "vcf-scaffolds");
-        if not os.path.isdir(vcf_dir):
-            os.makedirs(vcf_dir);
-        vcf_log_dir = os.path.join(globs['iterdir'], "vcf-scaffolds-logs");
-        if not os.path.isdir(vcf_log_dir):
-            os.makedirs(vcf_log_dir);
-        # Make directories for the VCFs.
+        globs['iter-gather-vcf-log'] = os.path.join(globs['iterlogdir'], "gatk-gathervcfs-iter-" + globs['iter-str'] + "-intermediate.log");
+        globs['iter-gather-vcf'] = os.path.join(globs['itervcfdir'], "iter-" + globs['iter-str'] + "-filter-intermediate.vcf.gz");
 
-        for result in pool.imap(varcall.haplotypeCallerMulti, ((scaff, dup_bamfile, cur_ref, vcf_dir, vcf_log_dir, globs, step_start_time) for scaff in globs['scaffolds'])):
-            step_start_time, exit_flag = result;
-            if exit_flag:
-                pool.terminate();
-                PC.endProg(globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        # HaplotypeCaller.
+        globs['iter-final-vcf-log'] = os.path.join(globs['iterlogdir'], "gatk-selectsnps-iter-" + globs['iter-str'] + "-intermediate.log");
+        globs['iter-final-vcf'] = os.path.join(globs['itervcfdir'], "iter-" + globs['iter-str'] + "-filter-intermediate-snps.vcf.gz");
+    # Final VCF file for this iteration
 
-        if globs['iteration'] == globs['num-iters']:
-            pool.terminate();
-            lastIter(vcf_dir, vcf_log_dir, cur_ref, globs, step_start_time);
-        # If this is the last iteration, go to those steps.
+    if globs['last-iter']:
+        if globs['indels']:
+            globs['iter-consensus-log'] = os.path.join(globs['iterlogdir'], "bcftools-consensus-iter-" + globs['iter-str'] + "-final.log");
+            globs['iter-final-chain'] = os.path.join(globs['iterfadir'], "iter-" + globs['iter-str'] + "-final.chain");
+            globs['iter-final-fa'] = os.path.join(globs['iterfadir'], "iter-" + globs['iter-str'] + "-final.fa");
 
         else:
-            step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": CatVariants", step_start=step_start_time);
-            vcf_file, exit_flag = varcall.gatherVcfs(vcf_dir, cur_ref, globs);
-            PC.exitCheck(exit_flag, globs);
-            PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-            # Combine the scaffold VCF files.
+            globs['iter-consensus-log'] = os.path.join(globs['iterlogdir'], "bcftools-consensus-iter-" + globs['iter-str'] + "-snps-final.log");
+            globs['iter-final-chain'] = os.path.join(globs['iterfadir'], "iter-" + globs['iter-str'] + "-snps-final.chain");
+            globs['iter-final-fa'] = os.path.join(globs['iterfadir'], "iter-" + globs['iter-str'] + "-snps-final.fa");
 
-            step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Index VCF", step_start=step_start_time);
-            exit_flag = varcall.indexVCF(vcf_file, globs);
-            PC.exitCheck(exit_flag, globs);
-            PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-            # Index the combined VCF file.
-    # Parallel version by scaffold.
-    ###
-    ## Call variants.
+        if globs['diploid']:
+            globs['iter-consensus-log'] = globs['iter-consensus-log'].replace("-final.log", "-diploid-final.log");
+            globs['iter-final-chain'] = globs['iter-final-chain'].replace("-final.chain", "-diploid-final.chain");
+            globs['iter-final-fa'] = globs['iter-final-fa'].replace("-final.fa", "-diploid-final.fa");
 
-    if globs['iteration'] != globs['num-iters']:
-    # Only do these steps if its not the last iteration.
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Select SNPs", step_start=step_start_time);
-        vcf_snp_file, exit_flag = varpost.selectSNPs(vcf_file, cur_ref, globs);
-        PC.exitCheck(exit_flag, globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        # Select SNPs only.
+    else:
+        globs['iter-consensus-log'] = os.path.join(globs['iterlogdir'], "bcftools-consensus-iter-" + globs['iter-str'] + "-snps-intermediate.log");
+        globs['iter-final-chain'] = os.path.join(globs['iterfadir'], "iter-" + globs['iter-str'] + "-snps-intermediate.chain");
+        globs['iter-final-fa'] = os.path.join(globs['iterfadir'], "iter-" + globs['iter-str'] + "-snps-intermediate.fa");
+    # Final FASTA files for this iteration
+    # Output files for current iteration
 
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Filter variants", step_start=step_start_time);
-        vcf_filter_file, exit_flag = varpost.varFilter((vcf_snp_file, "", "", cur_ref, globs));
-        PC.exitCheck(exit_flag, globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");    
-        # Filter VCF
+    if globs['iteration'] == 1:
+        cmds = piref.indexCheck(globs['ref'], globs, cmds);
+        cmds = piref.getScaffs(globs['ref'], globs, cmds);
+    # Check that all index files have been created and get the scaffold IDs from the reference FASTA
 
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Index filtered VCF", step_start=step_start_time);
-        exit_flag = varcall.indexVCF(vcf_filter_file, globs, suffix="filtered");
-        PC.exitCheck(exit_flag, globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        # Index the filtered VCF file.
+    do_mapping = PC.prevCheck(globs['iter-final-bam'], globs['iter-final-bam-log'], globs);
 
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Generate consensus", step_start=step_start_time);
-        cur_fa, exit_flag = varpost.genConsensus(vcf_filter_file, cur_ref, globs);
-        PC.exitCheck(exit_flag, globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        # Generate conesnsus sequence between refrence and variant calls
+    if do_mapping:
+        do_varcalling = True;
+    else:
+        do_varcalling = PC.prevCheck(globs['iter-final-vcf'], globs['iter-final-vcf-log'], globs);
 
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Fix headers", step_start=step_start_time);
-        cur_fa = varpost.fixHeaders(cur_fa, globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        # Put back the original FASTA headers in the conensus
+    if do_varcalling:
+        do_consensus = True;
+    else:
+        do_consensus = PC.prevCheck(globs['iter-final-fa'], globs['iter-consensus-log'], globs);
+    # CHECK WHICH STEPS WE NEED TO PERFORM
 
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + " Complete!", step_start=step_start_time);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "# " + "-" * 100);
-        pool.terminate();
-        # Finish up the iteration.
+    statstr = "EXECUTING";
+    if globs['resume']:
+        statstr = "RESUME";
+    if globs['dryrun']:
+        statstr = "DRYRUN";
+    # Status for the main step reports
+
+    if globs['iteration'] != 1:
+        cmds = piref.indexFa(globs, cmds, cur_ref);
+    # INDEX FASTA IF NOT FIRST ITERATION
+
+    if do_mapping:
+        PC.report_step(globs, cmds, "NA--01   Read mapping", statstr, "Mapping reads and post-processing.");
+        bamfiles, cmds = pimap.BWA(globs, cmds, cur_ref);
+        # READ MAPPING
+
+        #rg_bamfile, cmds = varprep.addRG(globs, cmds, bamfiles);
+        # ADD READ GROUPS
+
+        merged_bamfile, cmds = pimap.mergeBam(globs, cmds, bamfiles);
+        # MERGE BAM FILES also sorts
+
+        cmds = pimap.markDups(globs, cmds, merged_bamfile);
+        # MARK DUPLICATES
+    else:
+        PC.report_step(globs, cmds, "NA--01   Read mapping", "RESUME", "previous processed BAM file found, skipping all mapping steps: " + globs['iter-final-bam']);
+    ## READ MAPPING STEPS
+
+    #cmds = varprep.indexBAM(globs, cmds);
+    # INDEX BAM FILE
+    # Now done during MarkDuplicates
+
+    if globs['map-only']:
+        PC.report_step(globs, cmds, "NA--04   Iteration cleanup", statstr, "Removing intermediate files based on --keep* options.");
+        cmds = cleanUp(globs, cmds);
+
+        PC.printWrite(globs['logfilename'], globs['log-v'], "#\n# " + "=" * 51 + " ITERATION " + globs['iter-str'] + " COMPLETE! " + "=" * 50);
+        PC.report_step(globs, "", end=True);
+
+        globs['iteration'] +=1;
+        return globs;
+    # This stops the program after the first iteration of mapping if --maponly is set.
+
+
+    if do_varcalling:
+        PC.report_step(globs, cmds, "NA--02   Variant calling", statstr, "Calling and post-processing variants.");
+        cmds = varcall.haplotypeCaller(globs, cmds, cur_ref, globs['iter-final-bam']);
+        # HAPLOTYPECALLER
+
+        if globs['last-iter']:
+            cmds = varcall.genotypeGVCFs(globs, cmds, cur_ref);
+        # GENOTYPE GVCFS FOR LAST ITER
+
+        # if not globs['last-iter'] or (globs['last-iter'] and not globs['indels']):
+        #     cmds = varpost.selectSNPs(globs, cmds);
+        # SELECT SNPs if it is not the last iteration, or if it is and the final output should not contain indels
+
+        cmds = varpost.varFilter(globs, cmds, cur_ref);
+        # FILTER VCFs
+
+        cmds = varpost.gatherVCFs(globs, cmds);
+        # COMBINE VCF
+
+        cmds = varpost.indexVCF(globs, cmds, globs['iter-gather-vcf']);
+        # INDEX VCF        
+    else:
+        PC.report_step(globs, cmds, "NA--02   Variant calling", "RESUME", "previous processed VCF file found, skipping all variant calling steps: " + globs['iter-final-vcf']);
+    ## VARIANT CALLING STEPS
+   
+    if do_consensus:
+        PC.report_step(globs, cmds, "NA--03   Consensus generation", statstr, "Generating consensus FASTA.");
+        if globs['last-iter']:
+            mask_bedfile, cmds = con.getMask(globs, cmds, globs['iter-gather-vcf']);
+            # GET MASK SITES
+
+            cur_ref, cmds = con.maskFa(globs, cmds, mask_bedfile, cur_ref);
+            # MASK PREVIOUS REFERENCE
+
+        if not globs['last-iter'] or (globs['last-iter'] and not globs['indels']):
+            cmds = varpost.selectSNPs(globs, cmds, globs['iter-gather-vcf']);
+            # SELECT SNPs FROM VCF IF IT IS NOT THE LAST ITERATION OR IF --noindels IS SET
+
+            cmds = varpost.indexVCF(globs, cmds, globs['iter-final-vcf']);
+            # INDEX FINAL VCF
+
+        cmds, globs = con.genConsensus(globs, cmds, globs['iter-final-vcf'], cur_ref);
+        # GENERATE CONSENSUS
+    else:
+        PC.report_step(globs, cmds, "NA--03   Consensus generation", "RESUME", "previous processed consensus FASTA file found, skipping all consensus generation steps: " + globs['iter-final-fa']);    
+        globs['consensus-file'] = globs['iter-final-fa'];
+    ## CONSENSUS STEPS
+
+
+    PC.report_step(globs, cmds, "NA--04   Iteration cleanup", statstr, "Removing intermediate files based on --keep* options.");
+    cmds = cleanUp(globs, cmds);
+
+    PC.printWrite(globs['logfilename'], globs['log-v'], "#\n# " + "=" * 51 + " ITERATION " + globs['iter-str'] + " COMPLETE! " + "=" * 50);
+    PC.report_step(globs, "", end=True);
 
     globs['iteration'] +=1;
-    return globs, step_start_time;
+    return globs;
 
 #############################################################################
 
-def lastIter(gvcf, gvcf_log, cur_ref, globs, step_start_time):
+def cleanUp(globs, cmds):
+    i = globs['iter-str'];
+    prev_i = str(int(i) - 1);
+    if len(prev_i) == 1:
+        prev_iter = "0" + prev_i;
 
-    pool = mp.Pool(processes=globs['num-procs']);
-    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": GenotypeGVCFs", step_start=step_start_time);
-    if globs['num-procs'] == 1 or len(globs['scaffolds']) == 1:
-        vcf_file, exit_flag = varcall.genotypeGVCFs(gvcf, cur_ref, globs);
-        PC.exitCheck(exit_flag, globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        # Genotype GVCFs.
+    possible_map_files = { 'iter-' + i + "-dupmets.txt" : 2,  "merged-iter-" + i + ".bam.gz" : 2, "merged-rg-iter-" + i + ".bam.gz" : 2, 
+                            "merged-rg-mkdup-iter-" + i + ".bam.gz" : 1, "merged-rg-mkdup-iter-" + i + ".bam.gz.bai" : 1, 
+                            "pe-iter-" + i + ".bam.gz" : 2, "pem-iter-" + i + ".bam.gz" : 2, "se-iter-" + i + ".bam.gz" : 2 };
 
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Filter variants", step_start=step_start_time);
-        vcf_file, exit_flag = varpost.varFilter((vcf_file, "", "", cur_ref, globs));
-        PC.exitCheck(exit_flag, globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        # Filter variants.    
-    # Serial version.
-    ###
-    else:
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": GenotypeGVCFs", step_start=step_start_time);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "# --> Running " + str(globs['num-procs']) + " scaffolds in parallel.");
-        for result in pool.imap(varcall.genotypeGVCFsMulti, ((scaff, cur_ref, gvcf, gvcf_log, globs, step_start_time) for scaff in globs['scaffolds'])):
-            step_start_time, exit_flag = result;
-            if exit_flag:
-                pool.terminate();
-                PC.endProg(globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        # Genotype GVCFs.
+    possible_vcf_files = { "vcf-scaff" : 2, "gvcf-scaff" : 2, "iter-" + i + "-filter-intermediate.vcf.gz" : 2, "iter-" + i + "-filter-intermediate.vcf.gz.tbi" : 2, 
+                            "iter-" + i + "-filter-intermediate-snps.vcf.gz" : 1, "iter-" + i + "-filter-intermediate-snps.vcf.gz.tbi" : 1, 
+                            "iter-" + i + "-gathervcfs-params.txt" : 2, "iter-" + i + "-filter.vcf.gz" : 1, "iter-" + i + "-filter.vcf.gz.tbi" : 1, 
+                            "iter-" + i + "-filter-snps.vcf.gz" : 1, "iter-" + i + "-filter-snps.vcf.gz.tbi" : 1 };
 
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Filter variants", step_start=step_start_time);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "# --> Running " + str(globs['num-procs']) + " scaffolds in parallel.");
-        vcf = [ os.path.join(gvcf, f) for f in os.listdir(gvcf) if f.endswith(".vcf.gz")];
-        for result in pool.imap(varpost.varFilter, ((scaff_vcf, gvcf, gvcf_log, cur_ref, globs) for scaff_vcf in vcf)):
-            vcf_filter_file, exit_flag = result;
-            if exit_flag:
-                pool.terminate();
-                PC.endProg(globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        # Filter variants.       
+    possible_fa_files = ["iter-" + prev_i + "-masked.fa", "iter-" + prev_i + "snps-masked.fa", "iter-" + i + "-snps-intermediate.dict", 
+                            "iter-" + i + "-snps-intermediate.fa", "iter-" + i + "-snps-intermediate.fa.amb", "iter-" + i + "-snps-intermediate.fa.ann", 
+                            "iter-" + i + "-snps-intermediate.fa.bwt", "iter-" + i + "-snps-intermediate.fa.fai", "iter-" + i + "-snps-intermediate.fa.pac", 
+                            "iter-" + i + "-snps-intermediate.fa.sa" ]
 
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": GatherVcfs", step_start=step_start_time);
-        vcf_file, exit_flag = varcall.gatherVcfs(gvcf, cur_ref, globs);
-        PC.exitCheck(exit_flag, globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        # Combine filtered VCFs.
-    # Parallel version by scaffold.
-    ###
-    ## Genotype variants.
 
-    # step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Remove <NON_REF>", step_start=step_start_time);
-    # varpost.rmNonRef(vcf_file, globs);
-    # PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-    # # Because of a bug in GenotypeGVCFs, some of the weird <NON_REF> alleles remain in the final VCF. This messes up bcftools consensus.
-    # # This hack removes the <NON_REF>s.
-    # # Supposedly this will be fixed in the next GATK release:
-    # # https://gatk.broadinstitute.org/hc/en-us/community/posts/360056352871-Some-NON-REF-alleles-remain-after-GenotypeGVCFs-when-using-include-non-variant-sites
-    ### They seem to have fixed this in version 4.1.5.0
+    if globs['last-iter'] and globs['keeplevel'] == 0:
+        globs['keeplevel'] = 1;
 
-    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Index filtered VCF", step_start=step_start_time);
-    exit_flag = varcall.indexVCF(vcf_file, globs, suffix="filtered");
-    PC.exitCheck(exit_flag, globs);
-    PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-    # Index filtered VCF.
+    for f in possible_map_files:
+        if possible_map_files[f] > globs['keeplevel']:
+            full_f = os.path.join(globs['iterbamdir'], f);
+            if os.path.isfile(full_f):
+                cmd = "os.remove(" + full_f + ")";
+                cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Removing file", 'outfile' : "", 'logfile' : "", 'start' : False };
+                if globs['dryrun']:
+                    PC.report_step(globs, cmds, cmd, "DRYRUN", cmd);
+                else:
+                    PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
+                    os.remove(full_f);
 
-    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Get mask sites", step_start=step_start_time);
-    mask_bed, exit_flag = varpost.getMask(vcf_file, globs);
-    PC.exitCheck(exit_flag, globs);
-    PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-    # Get mask sites from final VCF.
+    for f in possible_vcf_files:
+        if possible_vcf_files[f] > globs['keeplevel']:
+            full_f = os.path.join(globs['itervcfdir'], f);
 
-    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Mask previous iteration FASTA", step_start=step_start_time);
-    mask_fa, exit_flag = varpost.maskFa(mask_bed, cur_ref, globs);
-    PC.exitCheck(exit_flag, globs);
-    PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-    # Mask the current (last iteration) reference FASTA.
+            if os.path.isfile(full_f):
+                cmd = "os.remove(" + full_f + ")";
+                cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Removing file", 'outfile' : "", 'logfile' : "", 'start' : False };
+                if globs['dryrun']:
+                    PC.report_step(globs, cmds, cmd, "DRYRUN", cmd);
+                else:    
+                    PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
+                    os.remove(full_f);
+            elif os.path.isdir(full_f):
+                cmd = "shutil.rmtree(" + full_f + ")";
+                cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Removing directory", 'outfile' : "", 'logfile' : "", 'start' : False };
+                if globs['dryrun']:
+                    PC.report_step(globs, cmds, cmd, "DRYRUN", cmd);
+                else:    
+                    PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
+                shutil.rmtree(full_f);
 
-    if not globs['indels']:
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Select SNPs", step_start=step_start_time);
-        vcf_file, exit_flag = varpost.selectSNPs(vcf_file, cur_ref, globs);
-        PC.exitCheck(exit_flag, globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        # Select SNPs only.
 
-        step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Index filtered SNP VCF", step_start=step_start_time);
-        exit_flag = varcall.indexVCF(vcf_file, globs, suffix="filtered-snps");
-        PC.exitCheck(exit_flag, globs);
-        PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-        # Index the filtered VCF SNP file.
-
-    step_start_time = PC.report_stats(globs, "ITERATION " + globs['iter-str'] + ": Generate final FASTA", step_start=step_start_time);
-    mask_fa, exit_flag = varpost.finalConsensus(vcf_file, mask_fa, globs);
-    PC.exitCheck(exit_flag, globs);
-    PC.printWrite(globs['logfilename'], globs['log-v'], "\n");
-    # Make the final consensus FASTA from the masked FASTA and the final filtered VCF file.
-
-    pool.terminate();
+    return cmds;

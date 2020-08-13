@@ -17,9 +17,11 @@ def errorOut(errnum, errmsg, globs):
 	fullstr = "\n" + border + "\n" + fullmsg + "\n" + border + "\n"
 	printWrite(globs['logfilename'], globs['log-v'], "\n" + border + "\n" + fullmsg + "\n" + border + "\n");
 	if globs['endprog']:
+		globs['exit-code'] = 1;
 		endProg(globs);
 	else:
-		sys.exit();
+		printWrite(globs['logfilename'], globs['log-v'], "\nScript call: " + " ".join(sys.argv));
+		sys.exit(1);
 
 #############################################################################
 
@@ -64,7 +66,7 @@ def execCheck(globs, a):
 
 def detectRefExt(ref, globs):
 # Try and identify the extension of the input FASTA file.
-	possible_exts = [".fasta", ".fasta.gz", ".fa", ".fa.gz", ".fna", ".fna.gz", ".faa", ".faa.gz"];
+	possible_exts = [".fasta", ".fasta.gz", ".fa", ".fa.gz", ".fna", ".fna.gz"];
 	for e in possible_exts:
 		if ref.endswith(e):
 			return e;
@@ -77,142 +79,98 @@ def getRef(globs):
 	if globs['iteration'] == 1:
 		cur_ref = globs['ref'];
 	else:
-		prev_iter_str = str(globs['iteration'] - 1);
-		if len(prev_iter_str) < 2:
-			prev_iter_str = "0" + prev_iter_str;
-		prev_iter_str = "iter-" + prev_iter_str;
-		cur_ref = os.path.join(globs['outdir'], prev_iter_str, prev_iter_str + "-final.fa");
+		cur_ref = globs['consensus-file'];
 	return cur_ref;
 
 #############################################################################
 
-def runCheck(cur_files, cur_logfile, globs):
+def runCheck(cmd, cmds, globs):
 # Check whether to run a command or not based on input options and presence of files.
-
-	if globs['overwrite']:
-		return True;
-	# If overwrite is on, run the command no matter what.
-
-	if globs['resume']:
-	# If the output files are present and resume is on:
-		if not os.path.isfile(cur_logfile):
-		# Check for the log file. If it doesn't exist, re-run the command.
-			return True;
-		else:
-		# Check for the log file. If it does exist, get the last line.
-			if os.stat(cur_logfile).st_size == 0:
-				return True;
-			# If the log file is empty, re-run this step.
-			else:
-				lastlog = open(cur_logfile, "r").readlines()[-1];
-				if "PSEUDOIT SUCCESS!" in lastlog:
-					return False;
-				# If the Pseudo-it success code is the last line of the file, don't run the command.
-				else:
-					return True;
-				# If the Pseudo-it success code is not the last line of the file, run the command.
-	## This version only considers existence of the logfile and the success code. This will be helpful for deleting
-	## intermediate files.
-
-	# if all(os.path.isfile(f) for f in cur_files):
-	# # If overwrite is not on, action depends on presence of output files.
-	# 	if globs['resume']:
-	# 	# If the output files are present and resume is on:
-	# 		if not os.path.isfile(cur_logfile):
-	# 		# Check for the log file. If it doesn't exist, re-run the command.
-	# 			return True;
-	# 		else:
-	# 		# Check for the log file. If it does exist, get the last line.
-	# 			lastlog = open(cur_logfile, "r").readlines()[-1];
-	# 			if "PSEUDOIT SUCCESS!" in lastlog:
-	# 				return False;
-	# 			# If the Pseudo-it success code is the last line of the file, don't run the command.
-	# 			else:
-	# 				return True;
-	# 			# If the Pseudo-it success code is not the last line of the file, run the command.
-	# 	else:
-	# 		return False;
-	# 	# This shouldn't happen? If overwrite and resume are off, these files shouldn't exist 
-	# 	# (because opt_parse would've stopped the user from using an existing directory).
-	## This version considers existence of the actual ouput file.
-
-	else:
-		return True;
-	# If overwrite isn't on but the file doesn't exist, run the command.
+	if os.path.isfile(cmds[cmd]['outfile']) and os.stat(cmds[cmd]['outfile']).st_size != 0:
+		if os.path.isfile(cmds[cmd]['logfile']) and os.stat(cmds[cmd]['logfile']).st_size != 0:
+			log_last_line = open(cmds[cmd]['logfile'], "r").readlines()[-1];
+			if "PSEUDOIT SUCCESS!" in log_last_line:
+				report_step(globs, cmds, cmd, "RESUME", "previous output found: " + cmds[cmd]['logfile']);
+				return False;
+	# If the output file exists and has content AND the logfile exists and has content AND the last line of the logfile is the pseudo-it success code, 
+	# then return False to NOT run the command
+	return True;
+	# In every other case, return True to run the command
 
 #############################################################################
 
-def runCMD(cmd, cmd_str, cmd_log, report_success, globs):
-# Run a command and deal with the output nicely.
+def prevCheck(outfile, logfile, globs):
+	if os.path.isfile(outfile) and os.stat(outfile).st_size != 0:
+		if os.path.isfile(logfile) and os.stat(logfile).st_size != 0:
+			log_last_line = open(logfile, "r").readlines()[-1];
+			if "PSEUDOIT SUCCESS!" in log_last_line:
+				return False;
+	# If the output file exists and has content AND the logfile exists and has content AND the last line of the logfile is the pseudo-it success code, 
+	# then return False to NOT run the command
+	return True;
+	# In every other case, return True to run the command	
+
+#############################################################################
+
+def runCMD(cmd, globs, cmds, report_success):
+# Run a command and deal with the output nicely
 	if globs['dryrun']:
-		printWrite(globs['logfilename'], globs['log-v'], "# " + getDateTime() + " --> Would execute   : " + cmd);
+		report_step(globs, cmds, cmd, "DRYRUN", cmd);
 		return False;
-	if not globs['dryrun']:
-		printWrite(globs['logfilename'], globs['log-v'], "# " + getDateTime() + " --> Executing   : " + cmd);
+	# If this is a dry run, don't run the command.
+
+	run = True;
+	if globs['resume']:
+		run = runCheck(cmd, cmds, globs);
+	# If -resume is set, check some conditions to determine whether to run the command
+
+	if run:
+		report_step(globs, cmds, cmd, "EXECUTING", cmd);
 		cmd_result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE);
 		cmd_stdout = cmd_result.stdout.decode();
 		cmd_stderr = cmd_result.stderr.decode();
 		cmd_output = cmd_stdout + "\n\n" + cmd_stderr;
+		printWrite(cmds[cmd]['logfile'], 3, "CMD:");
+		printWrite(cmds[cmd]['logfile'], 3, cmd + "\n");
+		printWrite(cmds[cmd]['logfile'], 3, "STDOUT output:");
+		printWrite(cmds[cmd]['logfile'], 3, cmd_stdout + "\n");
+		printWrite(cmds[cmd]['logfile'], 3, "STDERR output:");
+		printWrite(cmds[cmd]['logfile'], 3, cmd_stderr + "\n");
+
 		if any(ecode in cmd_output for ecode in ['error', 'Error', 'ERROR', 'Exception', 'Could not build fai index', 
-																'AssertionError', "Can't read file", "Killed", "No such file or directory", 
-																"Symbolic alleles other than <DEL> are currently not supported",
-																"Failed to open", "The index file is older than the data file"]):
-			printWrite(globs['logfilename'], globs['log-v'], "\n# " + getDateTime() + " * CMD ERROR: The following command returned an error:\n\n");
-			printWrite(globs['logfilename'], globs['log-v'], cmd);
-			printWrite(globs['logfilename'], globs['log-v'], "\n\nPlease check the log file for more info: " + cmd_log + "\n");
-			printWrite(cmd_log, 3, "CMD:");
-			printWrite(cmd_log, 3, cmd + "\n");
-			printWrite(cmd_log, 3, "STDOUT output:");
-			printWrite(cmd_log, 3, cmd_stdout + "\n");
-			printWrite(cmd_log, 3, "STDERR output:");
-			printWrite(cmd_log, 3, cmd_stderr + "\n");
-			#endProg(globs);
+															'AssertionError', "Can't read file", "Killed", "No such file or directory", 
+															"Symbolic alleles other than <DEL> are currently not supported",
+															"Failed to open", "The index file is older than the data file",
+															"tabix: command not found"]):
+			report_step(globs, cmds, cmd, "ERROR!", "Check log: " + cmds[cmd]['logfile']);
 			return True;
 		elif report_success:
-			printWrite(globs['logfilename'], globs['log-v'], spacedOut("# " + getDateTime() + " --> SUCCESS     : " + cmd_str + " logfile", globs['pad'], sep=".") + cmd_log);
-			#printWrite(globs['logfilename'], globs['log-v'], "# " + cmd);
-			#printWrite(globs['logfilename'], globs['log-v'], "# Command logfile: " + cmd_log + "\n");
-			printWrite(cmd_log, 3, "CMD:");
-			printWrite(cmd_log, 3, cmd + "\n");
-			printWrite(cmd_log, 3, "STDOUT output:");
-			printWrite(cmd_log, 3, cmd_stdout + "\n");
-			printWrite(cmd_log, 3, "STDERR output:");
-			printWrite(cmd_log, 3, cmd_stderr + "\n");
-			printWrite(cmd_log, 3, "PSEUDOIT SUCCESS!");
-			return False;
+			printWrite(cmds[cmd]['logfile'], 3, "PSEUDOIT SUCCESS!");
+			report_step(globs, cmds, cmd, "SUCCESS", cmds[cmd]['logfile']);
+			return False;		
 		else:
 			printWrite(globs['logfilename'], globs['log-v'], "\n" + getDateTime() + " * 00P5: Something went wrong. This shouldn't have happened. :(\n\n");
 			return True;
-	
-
-#############################################################################
-
-def exitCheck(eflag, globs):
-	if eflag:
-		endProg(globs);
-
-#############################################################################
-
-def endProg(globs):
-# A nice way to end the program.
-	if globs['quiet']:
-		globs['log-v'] = 1;
-	endtime = timeit.default_timer();
-	totaltime = endtime - globs['starttime'];
-	printWrite(globs['logfilename'], globs['log-v'], "#\n# Done!");
-	printWrite(globs['logfilename'], globs['log-v'], "# The date and time at the end is: " + getDateTime());
-	printWrite(globs['logfilename'], globs['log-v'], "# Total execution time:            " + str(round(totaltime,3)) + " seconds.");
-	printWrite(globs['logfilename'], globs['log-v'], "# Output directory for this run:   " + globs['outdir']);
-	printWrite(globs['logfilename'], globs['log-v'], "# Log file for this run:           " + globs['logfilename']);
-	printWrite(globs['logfilename'], globs['log-v'], "# " + "=" * 100);
-	printWrite(globs['logfilename'], globs['log-v'], "#");
-	sys.exit();
+	else:
+		return False;
 
 #############################################################################
 
 def getLogTime():
 # Function to get the date and time in a certain format.
 	return datetime.datetime.now().strftime("%I.%M.%S");
+
+#############################################################################
+
+def getDate():
+# Function to get the date and time in a certain format.
+	return datetime.datetime.now().strftime("%m.%d.%Y");
+
+#############################################################################
+
+def getTime():
+# Function to get the date and time in a certain format.
+	return datetime.datetime.now().strftime("%H:%M:%S");
 
 #############################################################################
 
@@ -251,7 +209,7 @@ def spacedOut(string, totlen, sep=" "):
 #############################################################################
 
 def getIterStr(globs):
-# Add a 0 to a single digit integer....
+# Add a 0 to a single digit integer so they align with double digit integers when printed
 	iter_str = str(globs['iteration']);
 	if len(iter_str) < 2:
 		iter_str = "0" + iter_str;
@@ -260,49 +218,123 @@ def getIterStr(globs):
 
 #############################################################################
 
-def report_stats(globs, msg="", step_start=0, stat_start=False, stat_end=False, sep=" "):
-# Uses psutil to gather memory and time info between steps and print them to the screen.
-	import timeit
-	if globs['psutil']:
-		import psutil;
-		dashes = 161;
-	else:
-		dashes = 101;
-	cur_time = timeit.default_timer();
-	if stat_start:
-	# The first time through just print the headers.
-		globs['progstarttime'] = cur_time;
-		printWrite(globs['logfilename'], globs['log-v'], "# " + "-" * dashes);
-		if globs['psutil']:
-			printWrite(globs['logfilename'], globs['log-v'], "# Date/time" + " " * 13 + "Current step" + " " * 25 + "Time since prev (sec)" + " " * 6 + "Elapsed time (sec)" + " " * 4 + "Current mem usage (MB)" + " " * 4 + "Virtual mem usage (MB)");
-		else:
-			printWrite(globs['logfilename'], globs['log-v'], "# Date/time" + " " * 13 + "Current step" + " " * 25 + "Time since prev (sec)" + " " * 6 + "Elapsed time (sec)");
-		printWrite(globs['logfilename'], globs['log-v'], "# " + "-" * dashes);
-	else:
-		prog_elapsed = round(cur_time - globs['progstarttime'], 5);
-		step_elapsed = round(cur_time - step_start, 5);
-		if globs['psutil']:
-			mem = round(sum([p.memory_info()[0] for p in globs['pids']]) / float(2 ** 20), 5);
-			vmem = round(sum([p.memory_info()[1] for p in globs['pids']]) / float(2 ** 20), 5);
-			printWrite(globs['logfilename'], globs['log-v'], "# " + getDateTime() + " " + msg + sep * (37-len(msg)) + str(step_elapsed) + sep * (27-len(str(step_elapsed))) + str(prog_elapsed) + sep * (22-len(str(prog_elapsed))) + str(mem) + sep * (26-len(str(mem))) + str(vmem));
-		else:
-			printWrite(globs['logfilename'], globs['log-v'], "# " + getDateTime() + " " + msg + sep * (37-len(msg)) + str(step_elapsed) + sep * (27-len(str(step_elapsed))) + str(prog_elapsed) + sep * (22-len(str(prog_elapsed))));
-		if stat_end:
-			printWrite(globs['logfilename'], globs['log-v'], "# " + "-" * dashes);
-	return cur_time;
+def getCMDNum(globs, num_cmds):
+# Format the command numbers for the log
+	cmd_num = str(num_cmds+1);
+	while len(cmd_num) < 4:
+		cmd_num = "0" + cmd_num;
+	cmd_num = globs['iter-str'] + "-" + cmd_num;
+	return cmd_num;
 
 #############################################################################
 
-def getSubPID(n):
-# Gets the process ids for the --stats option.
-	import psutil
-	return psutil.Process(os.getpid());
+def isPosInt(numstr):
+# Check if a string is a positive integer
+	try:
+		num = int(numstr);
+	except:
+		return False;
+
+	if num > 0:
+		return num;
+	else:
+		return False;
+
+#############################################################################
+
+def report_step(globs, cmds, cmd="", status="", result="", start=False, end=False, sep=" "):
+	cur_time = timeit.default_timer();
+	dashes = 150;
+	col_widths = [ 14, 10, 20, 20, 50, 12, 25 ];
+	if start:
+		headers = [ "# Date", "Time", "Elapsed time (s)", "Step time (s)", "Current step", "Status"];
+		headers = "".join([ spacedOut(str(headers[i]), col_widths[i]) for i in range(len(headers)) ]);
+
+		print("# " + "-" * 125);
+		print(headers);
+		print("# " + "-" * 125);
+		
+		printWrite(globs['logfilename'], 3, "# " + "-" * dashes);
+		headers += "Command/Result";
+		printWrite(globs['logfilename'], 3, headers);
+		printWrite(globs['logfilename'], 3, "# " + "-" * dashes);
+
+		return cur_time;
+
+	elif end:
+		iter_elapsed = str(round(cur_time - globs['iterstarttime'], 5));
+		#prog_elapsed = str(round(cur_time - globs['progstarttime'], 5));
+
+		#printWrite(globs['logfilename'], globs['log-v'], "# Program elapsed time (s):   " + prog_elapsed);
+		printWrite(globs['logfilename'], globs['log-v'], "# Iteration elapsed time (s): " + iter_elapsed);
+
+	else:
+		prog_elapsed = str(round(cur_time - globs['progstarttime'], 5));
+		if cmd.startswith("NA"):
+			step_elapsed = "-";
+			step = globs['iter-str'] + cmd.replace("NA-", "");
+		else:
+			if cmds[cmd]['start']:
+				step_elapsed = str(round(cur_time - cmds[cmd]['start'], 5));
+			else:
+				cmds[cmd]['start'] = cur_time;
+				step_elapsed = "-";
+			step = cmds[cmd]['cmd-num'] + " " + cmds[cmd]['desc'];
+		printline = [ "# " + getDate(), getTime(), prog_elapsed, step_elapsed, step, status ];
+		printline = [ spacedOut(str(printline[i]), col_widths[i]) for i in range(len(printline)) ];
+		print("".join(printline));
+
+		logline = [ "# " + getDate(), getTime(), prog_elapsed, step_elapsed, step, status, result ];
+		logline = [ spacedOut(str(logline[i]), col_widths[i]) for i in range(len(logline)) ];
+		printWrite(globs['logfilename'], 3, "".join(logline));
+
+	#if end:
+		#printWrite(globs['logfilename'], globs['log-v'], "# " + "-" * dashes);
+
 
 #############################################################################
 
 def welcome():
 # Reads the ASCII art "Referee" text to be printed to the command line.
 	return open(os.path.join(os.path.dirname(__file__), "pi-welcome.txt"), "r").read();
+
+#############################################################################
+
+def exitCheck(eflag, globs):
+	if eflag:
+		globs['exit-code'] = 1;
+		endProg(globs);
+
+#############################################################################
+
+def endProg(globs):
+# A nice way to end the program.
+	if globs['quiet']:
+		globs['log-v'] = 1;
+	endtime = timeit.default_timer();
+	totaltime = endtime - globs['starttime'];
+
+	printWrite(globs['logfilename'], globs['log-v'], "#\n# Done!");
+	printWrite(globs['logfilename'], globs['log-v'], "# The date and time at the end is: " + getDateTime());
+	printWrite(globs['logfilename'], globs['log-v'], "# Total execution time:            " + str(round(totaltime,3)) + " seconds.");
+	if globs['exit-code'] == 0:
+		if globs['map-only']:
+			printWrite(globs['logfilename'], globs['log-v'], "# Final BAM file:                  " + globs['iter-final-bam']); 
+		else:
+			printWrite(globs['logfilename'], globs['log-v'], "# Final Assembly:                  " + globs['consensus-file']);
+	
+	printWrite(globs['logfilename'], globs['log-v'], "# Output directory for this run:   " + globs['outdir']);
+	printWrite(globs['logfilename'], globs['log-v'], "# Log file for this run:           " + globs['logfilename']);
+
+	if globs['exit-code'] != 0:
+		printWrite(globs['logfilename'], globs['log-v'], "#\n# ERROR: NON-ZERO EXIT STATUS.");
+		printWrite(globs['logfilename'], globs['log-v'], "# ERROR: PSEUDO-IT FINISHED WITH ERRORS.");
+		printWrite(globs['logfilename'], globs['log-v'], "# ERROR: PLEASE CHECK THE LOG FILE FOR MORE INFO: " + globs['logfilename'] + "\n#");
+
+	print("# " + "=" * 125);
+	printWrite(globs['logfilename'], 3, "# " + "=" * 150);
+	printWrite(globs['logfilename'], globs['log-v'], "#");
+	sys.exit(globs['exit-code']);
 
 #############################################################################
 

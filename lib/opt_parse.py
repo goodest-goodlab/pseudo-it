@@ -11,12 +11,6 @@ def optParse(globs):
 	except:
 		PC.errorOut("\n*** ERROR: Your installation of Python is missing the argparse module. Please try a different version of Python (3+) or install the module.\n")
 	# First check if the argparse module is installed. If not, the input options cannot be parsed.
-	try:
-		import psutil
-		globs['psutil'] = True;
-	except:
-		globs['psutil'] = False;
-	# Check if psutil is installed for memory usage stats.
 
 	parser = argparse.ArgumentParser(description="Pseudo-it: assembly by iterative mapping.");
 
@@ -26,7 +20,7 @@ def optParse(globs):
 	parser.add_argument("-pe2", dest="pe2", help="A FASTQ file containing pair 2 of paired-end reads.", default=False);
 	parser.add_argument("-pem", dest="pem", help="A FASTQ file containing merged paired-end reads.", default=False);
 	# Inputs
-	parser.add_argument("-tmp", dest="tmp_dir", help="Some programs write files to a temporary directory. If your default tmp dir is size limited, specify a new one here. Default: Your system's tmp dir.", default=False);
+	parser.add_argument("-tmp", dest="tmp_dir", help="Some programs write files to a temporary directory. If your default tmp dir is size limited, specify a new one here, or just specifiy 'tmp-pi-out' to have a folder called 'tmp' created and used within the main output folder. Default: Your system's tmp dir.", default=False);
 	parser.add_argument("-o", dest="out_dest", help="Desired output directory. Default: pseudoit-[date]-[time]", default=False);
 	# Output
 	parser.add_argument("-resume", dest="resume", help="The path to a previous Pseudo-it directory to resume a run. Scans for presence of files and resumes when it can't find an expected file.", default=False);
@@ -37,16 +31,19 @@ def optParse(globs):
 	parser.add_argument("-bedtools", dest="bedtools_path", help="The path to the bedtools progam. Default: bedtools", default=False);
 	parser.add_argument("-bcftools", dest="bcftools_path", help="The path to the bcftools progam. Default: bcftools", default=False);
 	# Dependency paths
-	parser.add_argument("-i", dest="num_iters", help="The number of iterations Pseudo-it will run. Default: 4.", default=False);
+	parser.add_argument("-i", dest="num_iters", help="The number of iterations Pseudo-it will run. Default: 4.", type=int, default=4);
 	parser.add_argument("-bwa-t", dest="bwa_threads", help="The number of threads for BWA mem to use for each library. If you specify -bwa-t 3 and have 3 libraries (and have at least -p 3), this means a total of 9 processes will be used during mapping. If left unspecified and -p is specified this will be determined automatically by dividing -p by the number of libraries you provide. Otherwise, default: 1.", default=False);
 	parser.add_argument("-gatk-t", dest="gatk_threads", help="The number of threads for GATK's Haplotype caller to use. If you specify -p 4 and -gatk-t 4, this means that a total of 16 processes will be used. GATK default: 4.", default=False);
-	# parser.add_argument("-heap", dest="java_heap", help="The heap size to allot for called java programs (picard). Enter an integer, assumed unit is gigabytes (g). Default: System default.", default=False);
-	parser.add_argument("-f", dest="filter", help="The expression to filter variants. Must conform to VCF INFO field standards. Default: \"MQ < 30.0 || DP < 5 || DP > 60\"", default=False);
-	parser.add_argument("-p", dest="processes", help="The number of processes Pseudo-it should use. Default: 1.", default=False);
+	parser.add_argument("-f", dest="filter", help="The expression to filter variants. Must conform to VCF INFO field standards. Default read depth filters are optimized for a 30-40X sequencing run -- adjust for your assembly. Default: \"MQ < 30.0 || DP < 5 || DP > 60\"", default=False);
+	parser.add_argument("-p", dest="processes", help="The MAX number of processes Pseudo-it can use. If -p is set to 12 and -gatk-t is set to 4, then Pseudo-it will spawn 3 GATK processes in parallel. Default: 1.", default=False);
 	# User params
+	parser.add_argument("--maponly", dest="map_only", help="Only do one iteration and stop after read mapping.", action="store_true", default=False);
 	parser.add_argument("--noindels", dest="noindels", help="Set this to not incorporate indels into the final assembly.", action="store_true", default=False);
+	parser.add_argument("--diploid", dest="diploid", help="Set this use IUPAC ambiguity codes in the final FASTA file.", action="store_true", default=False);
+	parser.add_argument("--keepall", dest="keep_all", help="By default, pseudo-it keeps only the final files for each step of each iteration (BAM, VCF, FASTA and their respective indices). Set this option to keep all intermediate files. While this is the best way to ensure your runs can be resumed with different settings this will result many large files being saved (total of ~1TB for a 30X genome and 4 iterations).", action="store_true", default=False);
+	parser.add_argument("--keeponlyfinal", dest="keep_only_final", help="By default, pseudo-it keeps only the final files for each step of each iteration (BAM, VCF, FASTA and their respective indices). Set this option to keep these files ONLY for the final iteration. While this minimizes storage space required, you will be unable to resume this run.", action="store_true", default=False);
 	parser.add_argument("--overwrite", dest="ow_flag", help="Set this to overwrite existing files.", action="store_true", default=False);
-	parser.add_argument("--quiet", dest="quiet_flag", help="Set this flag to prevent Referee from reporting detailed information about each step.", action="store_true", default=False);
+	parser.add_argument("--quiet", dest="quiet_flag", help="Set this flag to prevent psuedo-it from reporting detailed information about each step.", action="store_true", default=False);
 	parser.add_argument("--version", dest="version_flag", help="Simply print the version and exit. Can also be called as '-version', '-v', or '--v'", action="store_true", default=False);
 	# User options
 	parser.add_argument("--norun", dest="norun", help=argparse.SUPPRESS, action="store_true", default=False);
@@ -110,26 +107,40 @@ def optParse(globs):
 
 		if not os.path.isdir(globs['outdir']) and not globs['norun']:
 			os.makedirs(globs['outdir']);
-
-	globs['logdir'] = os.path.join(globs['outdir'], "logs");
-	if not os.path.isdir(globs['logdir']) and not globs['norun']:
-		os.makedirs(globs['logdir']);
+	# Main output dir
 
 	if args.tmp_dir:
-		globs['tmpdir'] = args.tmp_dir;
+		if args.tmp_dir == "tmp-pi-out":
+			globs['tmpdir'] = os.path.join(globs['outdir'], 'tmp');
+		else:
+			globs['tmpdir'] = args.tmp_dir;
 		if not os.path.isdir(globs['tmpdir']):
 			os.system("mkdir " + globs['tmpdir']);
+	# tmp dir
 
-	globs['logfilename'] = os.path.join(globs['outdir'], os.path.basename(os.path.normpath(globs['outdir'])) + ".log");
+	globs['sample-name'] = os.path.basename(os.path.normpath(globs['outdir']));
+	globs['logfilename'] = os.path.join(globs['outdir'], globs['sample-name'] + ".log");
 	if globs['dryrun']:
 		globs['logfilename'] = globs['logfilename'].replace(".log", "-dryrun.log");
 	globs['scaffs'] = os.path.join(globs['outdir'], "scaffold-list.txt");
 	globs['endprog'] = True;
 	# Output prep.
 
+	if args.keep_all and args.keep_only_final:
+		PC.errorOut("OP7", "Only one of --keepall and --keeponlyfinal can be set.", globs);
+	elif args.keep_all:
+		globs['keeplevel'] = 2;
+	elif args.keep_only_final:
+		globs['keeplevel'] = 0;
+	# Intermediate file retention options. Keep level 1: Default (keep only final files per iteration). level 2: Keep ALL intermediate files. level 3: Keep only final files from last iteration.
+
 	if args.noindels:
 		globs['indels'] = False;
 	# Indel output option.
+
+	if args.diploid:
+		globs['diploid'] = True;
+	# Diploid output option.
 
 	if args.debug_opt:
 		globs['debug'] = True;
@@ -137,42 +148,60 @@ def optParse(globs):
 		globs['log-v'] = -1;
 	# Hidden test options
 
-	if args.num_iters and ("-" in args.num_iters or not args.num_iters.isdigit()):
-		PC.errorOut("OP7", "-i must be an integer value greater than 1.", globs);
-	elif args.num_iters:
-		globs['num-iters'] = int(args.num_iters);
+	globs['num-iters'] = PC.isPosInt(args.num_iters);
+	if globs['num-iters'] < 1:
+		PC.errorOut("OP8", "-i must be an integer value greater than 1.", globs);
 	# Checking the number of iterations option.
 
-	# if args.java_heap and not isdigit(args.java_heap) or int(args.java_heap) < 1:
-	# 	PC.errorOut("OP8", "-heap must be a positive integer.", globs);
-	# elif args.java_heap:
-	# 	globs['heap'] = int(args.java_heap);
-	# Getting the java heap option.
+	if args.map_only:
+		globs['num-iters'] = 1;
+		globs['map-only'] = True;
+	# Check the map only option.
 
 	if args.filter:
 		globs['filter'] = args.filter;
 	# Check the filter option.
 
-	if args.processes and ("-" in args.processes or not args.processes.isdigit()):
-		PC.errorOut("OP8", "-p must be an integer value greater than 1.", globs);
-	elif args.processes:
-		globs['num-procs'] = int(args.processes);
+	globs['num-procs'] = PC.isPosInt(args.processes);
+	if not globs['num-procs']:
+		PC.errorOut("OP9", "-p must be an integer value greater than 1.", globs);
 	# Checking the number of processors option.
 
 	if args.bwa_threads:
-		if "-" in args.bwa_threads or not args.bwa_threads.isdigit():
-			PC.errorOut("OP9", "-bwa-t must be an integer value greater than 1.", globs);
-		else:
-			globs['bwa-t'] = int(args.bwa_threads);
-	elif args.processes != 1:
+		globs['bwa-t'] = PC.isPosInt(args.bwa_threads);
+		if not globs['bwa-t']:
+			PC.errorOut("OP10", "-bwa-t must be an integer value greater than 1.", globs);
+	elif globs['num-procs'] != 1:
 		globs['bwa-t'] = math.floor(globs['num-procs'] / globs['num-libs']);
 	# Getting the number of BWA mem threads.
 
 	if args.gatk_threads:
-		if "-" in args.gatk_threads or not args.gatk_threads.isdigit():
-			PC.errorOut("OP9", "-gatk-t must be an integer value greater than 1.", globs);
-		else:
-			globs['gatk-t'] = int(args.gatk_threads);
+		globs['gatk-t'] = PC.isPosInt(args.gatk_threads);
+		if not globs['gatk-t']:		
+			PC.errorOut("OP11", "-gatk-t must be an integer value greater than 1.", globs);
+	if globs['map-only']:
+		globs['gatk-t'] = 1;
+	# Getting the number of GATK HaplotypeCaller threads
+
+	if globs['num-procs'] > 20:
+		globs['gvcf-procs'] = 20;
+	else:
+		globs['gvcf-procs'] = globs['num-procs'];
+	# Check if the number of proces requested is over the max allowed for GenotypeGVCFs.
+
+	if globs['num-procs'] < globs['gatk-t'] or globs['num-procs'] < globs['bwa-t']:
+		PC.errorOut("OP12", "-p must be greater than both -bwa-t and -gatk-t, else we can't spawn a single process efficiently.", globs);
+	# Check that the procs requested between programs are compatible
+
+	procs_needed = globs['num-libs'] * globs['bwa-t'];
+	if procs_needed > globs['num-procs']:
+		globs['map-procs'] = math.floor(globs['num-procs'] / globs['bwa-t']);
+	else:
+		globs['map-procs'] = globs['num-libs'];
+    # Determine number of BWA processes to launch
+
+	globs['gatk-procs'] = math.floor(globs['num-procs'] / globs['gatk-t']);
+    # Determine number of GATK HaplotypeCaller processes to launch
 
 	if args.quiet_flag:
 		globs['quiet'] = True;
@@ -186,15 +215,7 @@ def optParse(globs):
 	# If the quiet option was set before, set the verbosity for printWrite here so nothing is
 	# printed to the screen, but still output to the logfile.
 
-	step_start_time = "";
-	if globs['psutil']:
-		globs['pids'] = [psutil.Process(os.getpid())];	
-	globs['stats'] = True;
-	if not globs['norun']:
-		step_start_time = PC.report_stats(globs, stat_start=True);
-	# Initializing the stats options if --quiet is not set.
-
-	return globs, step_start_time;
+	return globs;
 
 #############################################################################
 
@@ -230,8 +251,8 @@ def startProg(globs):
 		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# Paired-reads 1:", pad) + globs['pe1']);	
 		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# Paired-reads 2:", pad) + globs['pe2']);
 
-	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# Temporary file directory:", pad) + globs['tmpdir']);
 	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# Output directory:", pad) + globs['outdir']);
+	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# Temporary file directory:", pad) + globs['tmpdir']);
 	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# Log file:", pad) + os.path.basename(globs['logfilename']));
 
 	PC.printWrite(globs['logfilename'], globs['log-v'], "# " + "-" * 125);
@@ -262,31 +283,56 @@ def startProg(globs):
 	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# Option", pad) + PC.spacedOut("Current setting", opt_pad) + "Current action");
 	# PC.printWrite(globs['logfilename'], globs['log-v'], "# " + "-" * 125);
 
+	if globs['map-only']:
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --maponly", pad) +
+					PC.spacedOut("True", opt_pad) + 
+					"Pseudo-it will do only one iteration and stop after mapping.");
+
+	if globs['keeplevel'] == 0:
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --keeponlyfinal", pad) +
+					PC.spacedOut("True", opt_pad) + 
+					"Pseudo-it will keep only the final files from the last iteration.");
+	elif globs['keeplevel'] == 1:			
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --keeponlyfinal, --keepall", pad) +
+					PC.spacedOut("False,False", opt_pad) + 
+					"Default behavior: Pseudo-it will keep the final files from each iteration.");
+	elif globs['keeplevel'] == 2:			
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --keepall", pad) +
+					PC.spacedOut("True", opt_pad) + 
+					"Pseudo-it will keep ALL files from each iteration.");
+	# Reporting the intermediate files options.
+
 	if globs['resume']:
 		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -resume", pad) +
-					PC.spacedOut(str(globs['outdir']), opt_pad) + 
-					"Pseudo-it will attempt to resume the run from this directory.");
+					PC.spacedOut("True", opt_pad) + 
+					"Pseudo-it will attempt to resume the run from the specified directory.");
 	# Reporting the resume option.
 
-	if globs['indels']:
-		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --noindels", pad) + 
-					PC.spacedOut("False", opt_pad) + 
-					"Final assembly will incorporate indels.");
-	else:
-		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --noindels", pad) + 
-					PC.spacedOut("True", opt_pad) + 
-					"Final assembly will NOT incorporate indels.");		
+	if not globs['map-only']:
+		if globs['indels']:
+			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --noindels", pad) + 
+						PC.spacedOut("False", opt_pad) + 
+						"Final assembly will incorporate indels.");
+		else:
+			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --noindels", pad) + 
+						PC.spacedOut("True", opt_pad) + 
+						"Final assembly will NOT incorporate indels.");		
 	# Reporting --noindels option.
+
+		if globs['diploid']:
+			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --diploid", pad) + 
+						PC.spacedOut("True", opt_pad) + 
+						"Final assembly will use IUPAC ambiguity codes for variant sites.");
+		else:
+			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --diploid", pad) + 
+						PC.spacedOut("False", opt_pad) + 
+						"Final assembly will NOT use IUPAC ambiguity codes for variant sites.");		
+		# Reporting --diploid option.
 
 	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -i", pad) + 
 				PC.spacedOut(str(globs['num-iters']), opt_pad) + 
 				"Pseudo-it will perform this many iterations of mapping.");
 	# Reporting the number of iterations.
-
-	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -f", pad) + 
-				PC.spacedOut(str(globs['filter']), opt_pad) + 
-				"Variants will be filtered based on these criteria during the Variant Filtration step.");
-	# Reporting the filter option.
 
 	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -p", pad) + 
 				PC.spacedOut(str(globs['num-procs']), opt_pad) + 
@@ -298,15 +344,31 @@ def startProg(globs):
 				"BWA mem will use this many threads for mapping.");
 	# Reporting the BWA mem threads option.
 
-	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -gatk-t", pad) + 
-				PC.spacedOut(str(globs['gatk-t']), opt_pad) + 
-				"HaplotypeCaller's --native-pair-hmm-threads option will use this many threads.");
-	# Reporting the GATK HaplotypeCaller --native-pair-hmm-threads option.
+	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# BWA parallel libraries", pad) + 
+				PC.spacedOut(str(globs['map-procs']), opt_pad) + 
+				"This many libraries will be mapped in parallel, each using " + str(globs['bwa-t']) + " threads.");
+	# Reporting the determined number of processes to spawn for BWA
 
-	# PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -heap", pad) + 
-	# 			PC.spacedOut(str(globs['heap']), pad) + 
-	# 			"The heap size in gigabytes for called java programs (picard).");
-	# Reporting the GATK HaplotypeCaller --native-pair-hmm-threads option.
+	if not globs['map-only']:
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -gatk-t", pad) + 
+					PC.spacedOut(str(globs['gatk-t']), opt_pad) + 
+					"HaplotypeCaller's --native-pair-hmm-threads option will use this many threads.");
+		# Reporting the GATK HaplotypeCaller --native-pair-hmm-threads option.
+
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# GATK HaplotypeCaller procs", pad) + 
+					PC.spacedOut(str(globs['gatk-procs']), opt_pad) + 
+					"This many scaffolds will be called in parallel, each using " + str(globs['gatk-t']) + " threads.");
+		# Reporting the determined number of processes to spawn for GATK HaplotypeCaller
+
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# GATK GenotypeGVCFs procs", pad) + 
+			PC.spacedOut(str(globs['gvcf-procs']), opt_pad) + 
+			"This many scaffolds will be genotyped in parallel in the final iteration.");
+		# Reporting the determined number of processes to spawn for GATK GenotypeGVCFs
+
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -f", pad) + 
+					PC.spacedOut(str(globs['filter']), opt_pad) + 
+					"Variants will be filtered based on these criteria during the Variant Filtration step.");
+		# Reporting the filter option.
 
 	if not globs['quiet']:
 		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --quiet", pad) + 
