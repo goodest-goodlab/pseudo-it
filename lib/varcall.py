@@ -63,7 +63,7 @@ def genotypeGVCFs(globs, cmds, cur_ref):
         cmds[gatk_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Genotype gVCF " + scaff, 'outfile' : vcf_file,  'logfile' : cur_logfile, 'start' : False };
         gatk_cmds[gatk_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Genotype gVCF " + scaff, 'outfile' : vcf_file,  'logfile' : cur_logfile, 'start' : False };
 
-    pool = mp.Pool(processes=globs['num-procs']);
+    pool = mp.Pool(processes=globs['gvcf-procs']);
     for exit_flag in pool.starmap(PC.runCMD, ((gatk_cmd, globs, cmds, True) for gatk_cmd in gatk_cmds )):
         if exit_flag:
             pool.terminate();
