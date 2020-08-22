@@ -60,9 +60,8 @@ def execCheck(globs, a):
 				prog = prog.title();
 			errorOut("CORE2", prog + " not found at specified path: " + globs[opt], globs);
 	
-	try:
-		cmd_result = subprocess.run("tabix", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE);
-	except:
+	cmd_result = subprocess.run("tabix", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE);
+	if cmd_result.returncode > 1:
 		errorOut("CORE2", "tabix program not found. Please install and ensure it is in your PATH." + globs[opt], globs);
 
 	return globs;
