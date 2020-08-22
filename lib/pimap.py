@@ -20,11 +20,16 @@ def BWA(globs, cmds, cur_ref):
         except:
             with open(fq_file) as fo:
                 fl = fo.readline().strip()[1:].split(":");
-        # Try to read the first line whether the fastq file is compressed or not.          
+        # Try to read the first line whether the fastq file is compressed or not.        
 
-        read_group = "@RG\\tID:" + ".".join([fl[0], fl[1], fl[2]]);
+        if len(fl) < 3:
+            read_group_id = "pi-iter-" + globs['iter-str'];
+        else:
+            read_group_id = ".".join([fl[0], fl[1], fl[2]]);
+
+        read_group = "@RG\\tID:" + read_group_id;
         read_group += "\\tPL:ILLUMINA";
-        read_group += "\\tPU:" + ".".join([fl[0], fl[1], fl[2]]);
+        read_group += "\\tPU:" + read_group_id;
         read_group += "\\tLB:" + globs['sample-name'] + "-pseudoit-iter-" + globs['iter-str'] + "-" + lib_type;
         read_group += "\\tSM:" + globs['sample-name'];
         # Extract read group info from first line.
@@ -36,7 +41,7 @@ def BWA(globs, cmds, cur_ref):
         bamfile = os.path.join(globs['iterbamdir'], lib_type + "-iter-" + globs['iter-str'] + ".bam.gz");
         bamfiles.append(bamfile);
 
-        bwa_cmd = globs['bwa-path'] + " mem -t " + str(globs['bwa-t']) + " -R '" + read_group + "' " + cur_ref + " " + globs['libs'][lib_type] + " | " + globs['samtools-path'] + " view -bh - > " + bamfile;
+        bwa_cmd = globs['bwa-path'] + " mem -t " + str(globs['bwa-t']) + " -R '" + read_group + "' " + cur_ref + " " + globs['libs'][lib_type] + " | " + globs['samtools-path'] + " sort | " + globs['samtools-path'] + " view -bh - > " + bamfile;
         cmd_num = PC.getCMDNum(globs, len(cmds))
         cmds[bwa_cmd] = { 'cmd-num' : cmd_num, 'desc' : "BWA " + lib_type + " read mapping", 'outfile' : bamfile,  'logfile' : cur_logfile, 'start' : False };
 
