@@ -51,7 +51,7 @@ All of these programs can easily be installed from [bioconda](https://anaconda.o
 
 The most basic usage of pseudo-it would be a command as follows:
 
-`python pseudo_it.py -ref [reference genome FASTA file] -pe1 [paired-end reads FASTQ file 1] -pe2 [paired-end reads FASTQ file 2] -i [number of iterations of mapping] -p [max number of processes to use] -o [desired output directory]`
+    python pseudo_it.py -ref [reference genome FASTA file] -pe1 [paired-end reads FASTQ file 1] -pe2 [paired-end reads FASTQ file 2] -i [number of iterations of mapping] -p [max number of processes to use] -o [desired output directory]
 
 ### Options
 
@@ -111,12 +111,12 @@ In addition to our own efforts to speed up the programs that pseudo-it runs, tho
 
 ### An optimized command for all 3 types of reads and a fragmented assembly with 10 large scaffolds + 1000s of small scaffolds
 
-`python pseudo_it.py -ref [reference genome FASTA file] -se [single-end reads FASTQ file] -pe1 [paired-end reads FASTQ file 1] -pe2 [paired-end reads FASTQ file 2] -pem [merged paired-end reads FASTQ file] -i 4 -p 48 -o [desired output directory]`
+    python pseudo_it.py -ref [reference genome FASTA file] -se [single-end reads FASTQ file] -pe1 [paired-end reads FASTQ file 1] -pe2 [paired-end reads FASTQ file 2] -pem [merged paired-end reads FASTQ file] -i 4 -p 48 -o [desired output directory]
 
 This command would run all three read sets through BWA mem with 48 / 3 = 16 threads each and would subsequently spawn 12 GATK HaplotypeCaller processes, each with the default `--native-pair-hmm-threads 4` option (12 * 4 = 48). The 10 long scaffolds would each have a separate processes while the shorter scaffolds would run have 2 extra processes allocated for them.
 
 ### An less resource-intensive command for all 3 types of reads and a fragmented assembly with 10 large scaffolds + 1000s of small scaffolds
 
-`python pseudo_it.py -ref [reference genome FASTA file] -se [single-end reads FASTQ file] -pe1 [paired-end reads FASTQ file 1] -pe2 [paired-end reads FASTQ file 2] -pem [merged paired-end reads FASTQ file] -i 4 -p 12 -gatk-t 1 -o [desired output directory]`
+    python pseudo_it.py -ref [reference genome FASTA file] -se [single-end reads FASTQ file] -pe1 [paired-end reads FASTQ file 1] -pe2 [paired-end reads FASTQ file 2] -pem [merged paired-end reads FASTQ file] -i 4 -p 12 -gatk-t 1 -o [desired output directory]
 
 This command adds the `gatk-t 1` option to reduce the number of threads for HaplotypeCaller, thus reducing the total number of processes needed to `-p 12`. BWA mem would now run on each read set with only 4 threads.
