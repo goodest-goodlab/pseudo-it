@@ -15,14 +15,14 @@ def optParse(globs):
 	parser = argparse.ArgumentParser(description="Pseudo-it: assembly by iterative mapping.");
 
 	parser.add_argument("-ref", dest="ref", help="The FASTA assembly to use for the initial mapping.", default=False);
-	parser.add_argument("-se", dest="se", help="A FASTQ file containing single-end reads.", default=False);
-	parser.add_argument("-pe1", dest="pe1", help="A FASTQ file containing pair 1 of paired-end reads.", default=False);
-	parser.add_argument("-pe2", dest="pe2", help="A FASTQ file containing pair 2 of paired-end reads.", default=False);
-	parser.add_argument("-pem", dest="pem", help="A FASTQ file containing merged paired-end reads.", default=False);
-	parser.add_argument("-bam", dest="bam", help="A BAM file with the provided reads mapped to the reference to be used for the first iteration. This BAM file must be pre-indexed with samtools index.", default=False);
+	parser.add_argument("-se", dest="se", help="A FASTQ file containing single-end reads. At least one of -se, -pe1 and pe2, or pem must be provided.", default=False);
+	parser.add_argument("-pe1", dest="pe1", help="A FASTQ file containing pair 1 of paired-end reads. At least one of -se, -pe1 and pe2, or pem must be provided.", default=False);
+	parser.add_argument("-pe2", dest="pe2", help="A FASTQ file containing pair 2 of paired-end reads. At least one of -se, -pe1 and pe2, or pem must be provided.", default=False);
+	parser.add_argument("-pem", dest="pem", help="A FASTQ file containing merged paired-end reads. At least one of -se, -pe1 and pe2, or pem must be provided.", default=False);
+	parser.add_argument("-bam", dest="bam", help="OPTIONAL: A BAM file with the provided reads mapped to the reference to be used for the first iteration. This BAM file must be pre-indexed with samtools index.", default=False);
 	# Inputs
 	parser.add_argument("-tmp", dest="tmp_dir", help="Some programs write files to a temporary directory. If your default tmp dir is size limited, specify a new one here, or just specifiy 'tmp-pi-out' to have a folder called 'tmp' created and used within the main output folder. Default: Your system's tmp dir.", default=False);
-	parser.add_argument("-o", dest="out_dest", help="Desired output directory. Default: pseudoit-[date]-[time]", default=False);
+	parser.add_argument("-o", dest="out_dest", help="Desired output directory. This will be created for you if it doesn't exist. Default: pseudoit-[date]-[time]", default=False);
 	# Output
 	parser.add_argument("-resume", dest="resume", help="The path to a previous Pseudo-it directory to resume a run. Scans for presence of files and resumes when it can't find an expected file.", default=False);
 	parser.add_argument("-bwa", dest="bwa_path", help="The path to the BWA mapping progam. Default: bwa", default=False);
