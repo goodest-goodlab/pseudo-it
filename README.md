@@ -17,7 +17,7 @@
 #### Sarver BAJ, Keeble S, Cosart T, Tucker PK, Dead MD, Good JM. 2017. Phylogenomic insights into mouse evolution using a pseudoreference approach. Genome Biology and Evololution. https://doi.org/10.1093/gbe/evx034.
 
 ## Version History
-#### This is version beta 3.0, released August 13, 2020
+#### This is version beta 3.1, released August 13, 2020
 
 Change log:
 * Restructured code to add modularity for easy incorporation of other read mappers or variant callers.
