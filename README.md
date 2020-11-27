@@ -8,9 +8,7 @@
 
 ### Pseudo-it is a program that uses an iterative read mapping process to generate pseudo-assemblies of closely related genomes to mitigate reference bias. 
 
-#### What follows is a brief explanation of the options. Please see the project website for much more in depth info about the algorithm and examples of the program's usage.
-
-#### https://gwct.github.io/referee/
+#### What follows is a brief explanation of the options.
 
 #### This is an update of version 2 of the software, found here: https://github.com/bricesarver/pseudo-it
 
