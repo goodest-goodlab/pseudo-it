@@ -19,6 +19,7 @@ def optParse(globs):
 	parser.add_argument("-pe1", dest="pe1", help="A FASTQ file containing pair 1 of paired-end reads.", default=False);
 	parser.add_argument("-pe2", dest="pe2", help="A FASTQ file containing pair 2 of paired-end reads.", default=False);
 	parser.add_argument("-pem", dest="pem", help="A FASTQ file containing merged paired-end reads.", default=False);
+	parser.add_argument("-bam", dest="bam", help="A BAM file with the provided reads mapped to the reference to be used for the first iteration. This BAM file must be pre-indexed with samtools index.", default=False);
 	# Inputs
 	parser.add_argument("-tmp", dest="tmp_dir", help="Some programs write files to a temporary directory. If your default tmp dir is size limited, specify a new one here, or just specifiy 'tmp-pi-out' to have a folder called 'tmp' created and used within the main output folder. Default: Your system's tmp dir.", default=False);
 	parser.add_argument("-o", dest="out_dest", help="Desired output directory. Default: pseudoit-[date]-[time]", default=False);
@@ -35,7 +36,7 @@ def optParse(globs):
 	parser.add_argument("-bwa-t", dest="bwa_threads", help="The number of threads for BWA mem to use for each library. If you specify -bwa-t 3 and have 3 libraries (and have at least -p 3), this means a total of 9 processes will be used during mapping. If left unspecified and -p is specified this will be determined automatically by dividing -p by the number of libraries you provide. Otherwise, default: 1.", default=False);
 	parser.add_argument("-gatk-t", dest="gatk_threads", help="The number of threads for GATK's Haplotype caller to use. If you specify -p 4 and -gatk-t 4, this means that a total of 16 processes will be used. GATK default: 4.", default=False);
 	parser.add_argument("-f", dest="filter", help="The expression to filter variants. Must conform to VCF INFO field standards. Default read depth filters are optimized for a 30-40X sequencing run -- adjust for your assembly. Default: \"MQ < 30.0 || DP < 5 || DP > 60\"", default=False);
-	parser.add_argument("-p", dest="processes", help="The MAX number of processes Pseudo-it can use. If -p is set to 12 and -gatk-t is set to 4, then Pseudo-it will spawn 3 GATK processes in parallel. Default: 1.", default=False);
+	parser.add_argument("-p", dest="processes", help="The MAX number of processes Pseudo-it can use. If -p is set to 12 and -gatk-t is set to 4, then Pseudo-it will spawn 3 GATK processes in parallel. Default: 1.", type=int, default=1);
 	# User params
 	parser.add_argument("--maponly", dest="map_only", help="Only do one iteration and stop after read mapping.", action="store_true", default=False);
 	parser.add_argument("--noindels", dest="noindels", help="Set this to not incorporate indels into the final assembly.", action="store_true", default=False);
@@ -61,14 +62,19 @@ def optParse(globs):
 		globs['dryrun'] = True;
 	globs['overwrite'] = args.ow_flag;
 
-	if not any([args.se, args.pe1, args.pe2, args.pem]):
-		PC.errorOut("OP1", "At least one FASTQ library file must be given with -se, -pe1 and -pe2, or -pem", globs);
+	if args.num_iters > 1 or not args.bam:
+		if not any([args.se, args.pe1, args.pe2, args.pem]):
+			PC.errorOut("OP1", "At least one FASTQ library file must be given with -se, -pe1 and -pe2, or -pem", globs);
 
 	if args.pe1 and not args.pe2 or not args.pe1 and args.pe2:
 		PC.errorOut("OP2", "With a paired end library, both -pe1 and -pe2 must be specified.", globs);
 
 	if not args.ref:
 		PC.errorOut("OP3", "A reference FASTA file must be provided with -ref.", globs);
+
+	if args.bam:
+		globs['bam'] = args.bam;
+		globs['bam-index'] = args.bam + ".bai";
 
 	globs['se'], globs['pe1'], globs['pe2'], globs['pem'], globs['ref'] = args.se, args.pe1, args.pe2, args.pem, args.ref;
 	globs['num-libs'] = len( [ l for l in [globs['se'], globs['pe1'], globs['pem']] if l ] );
@@ -167,12 +173,13 @@ def optParse(globs):
 		PC.errorOut("OP9", "-p must be an integer value greater than 1.", globs);
 	# Checking the number of processors option.
 
-	if args.bwa_threads:
-		globs['bwa-t'] = PC.isPosInt(args.bwa_threads);
-		if not globs['bwa-t']:
-			PC.errorOut("OP10", "-bwa-t must be an integer value greater than 1.", globs);
-	elif globs['num-procs'] != 1:
-		globs['bwa-t'] = math.floor(globs['num-procs'] / globs['num-libs']);
+	if not args.bam:
+		if args.bwa_threads:
+			globs['bwa-t'] = PC.isPosInt(args.bwa_threads);
+			if not globs['bwa-t']:
+				PC.errorOut("OP10", "-bwa-t must be an integer value greater than 1.", globs);
+		elif globs['num-procs'] != 1:
+			globs['bwa-t'] = math.floor(globs['num-procs'] / globs['num-libs']);
 	# Getting the number of BWA mem threads.
 
 	if args.gatk_threads:
@@ -287,6 +294,11 @@ def startProg(globs):
 		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --maponly", pad) +
 					PC.spacedOut("True", opt_pad) + 
 					"Pseudo-it will do only one iteration and stop after mapping.");
+
+	if globs['bam']:
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -bam", pad) +
+					PC.spacedOut(globs['bam'], opt_pad) + 
+					"Pseudo-it will use this BAM file for the first iteration.");
 
 	if globs['keeplevel'] == 0:
 		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --keeponlyfinal", pad) +

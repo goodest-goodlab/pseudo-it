@@ -27,7 +27,10 @@ def errorOut(errnum, errmsg, globs):
 
 def fileCheck(globs):
 # Checks file options.
-	for opt in ['se', 'pe1', 'pe2', 'pem', 'ref']:
+	files = ['se', 'pe1', 'pe2', 'pem', 'ref'];
+	if globs['bam']:
+		files += ['bam', 'bam-index'];
+	for opt in files:
 		if globs[opt] and not os.path.isfile(globs[opt]):
 			errorOut("CORE1", "File not found: " + globs[opt], globs);
 

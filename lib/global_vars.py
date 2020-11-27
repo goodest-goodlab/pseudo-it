@@ -33,6 +33,8 @@ def init():
         'num-libs' : 0,
         # FASTQ library info
 
+        'bam' : False,
+        'bam-index' : False,
         'indir' : '',
         'outdir' : '',
         'sample-name' : '',

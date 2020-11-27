@@ -42,10 +42,13 @@ def mapping(globs):
             os.makedirs(d);
     # Make directories for current iteration
 
-    globs['iter-final-bam-log'] = os.path.join(globs['iterlogdir'], "picard-mkdup-iter-" + globs['iter-str'] + ".log");
-    globs['iter-final-bam'] = os.path.join(globs['iterbamdir'], "merged-rg-mkdup-iter-" + globs['iter-str'] + ".bam.gz");
+    if globs['bam'] and globs['iteration'] == 1:
+        globs['iter-final-bam-log'] = "NA";
+        globs['iter-final-bam'] = globs['bam'];  
+    else:      
+        globs['iter-final-bam-log'] = os.path.join(globs['iterlogdir'], "picard-mkdup-iter-" + globs['iter-str'] + ".log");
+        globs['iter-final-bam'] = os.path.join(globs['iterbamdir'], "merged-rg-mkdup-iter-" + globs['iter-str'] + ".bam.gz");
     # Final BAM file for this iteration
-
 
     if globs['last-iter']:
         globs['iter-gather-vcf-log'] = os.path.join(globs['iterlogdir'], "gatk-gathervcfs-iter-" + globs['iter-str'] + ".log");
@@ -93,7 +96,10 @@ def mapping(globs):
         cmds = piref.getScaffs(globs['ref'], globs, cmds);
     # Check that all index files have been created and get the scaffold IDs from the reference FASTA
 
-    do_mapping = PC.prevCheck(globs['iter-final-bam'], globs['iter-final-bam-log'], globs);
+    if globs['bam']:
+        do_mapping = False;
+    else:
+        do_mapping = PC.prevCheck(globs['iter-final-bam'], globs['iter-final-bam-log'], globs);
 
     if do_mapping:
         do_varcalling = True;
@@ -130,6 +136,8 @@ def mapping(globs):
 
         cmds = pimap.markDups(globs, cmds, merged_bamfile);
         # MARK DUPLICATES
+    elif globs['bam'] and globs['iteration'] == 1:
+        PC.report_step(globs, cmds, "NA--01   Read mapping", "BAM", "initial BAM file provided, skipping all mapping steps: " + globs['iter-final-bam']);
     else:
         PC.report_step(globs, cmds, "NA--01   Read mapping", "RESUME", "previous processed BAM file found, skipping all mapping steps: " + globs['iter-final-bam']);
     ## READ MAPPING STEPS
