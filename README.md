@@ -32,6 +32,22 @@
 
 ### Pseudo-it is a program that uses an iterative read mapping process to generate pseudo-assemblies of closely related genomes to mitigate reference bias. 
 
+Pseudo-it performs a set of read mapping and variant calling steps to go from raw reads in FASTQ format with reference genome in FASTA format to a pseudo-assembly of the provided reads in FASTA format. This process is done iteratively to increase the number of reads mapped and capture more variation in the final assembly.
+
+For the first iteration, pseudo-it performs the following steps:
+
+1. Map provided reads (FASTQ) to **provided reference genome (FASTA).**
+2. Call variants on mapped reads.
+3. Generate a consensus FASTA file by inserting the called variants into the original sequence.
+
+For each subsequent iteration, the previous iteration's consensus FASTA file serves as the new reference for read mapping:
+
+1. Map provided reads (FASTQ) to **previous iteration consensus sequence (FASTA).**
+2. Call variants on mapped reads.
+3. Generate a new consensus FASTA file by inserting the called variants into the previous iteration's sequence.
+
+Each iteration should allow for more reads to be mapped and more variation to be incorporated into the assembly.
+
 #### What follows is a brief explanation of the options.
 
 #### This is an update of version 2 of the software, found here: https://github.com/bricesarver/pseudo-it
