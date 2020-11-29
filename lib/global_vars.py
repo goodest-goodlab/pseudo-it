@@ -55,6 +55,7 @@ def init():
         'gatk-path' : 'gatk',
         'bedtools-path' : 'bedtools',
         'bcftools-path' : 'bcftools',
+        'tabix-path' : 'tabix',
         # Dependency paths
 
         'bwa-t' : 1,

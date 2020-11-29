@@ -47,13 +47,24 @@ def optParse(globs):
 	parser.add_argument("--quiet", dest="quiet_flag", help="Set this flag to prevent psuedo-it from reporting detailed information about each step.", action="store_true", default=False);
 	parser.add_argument("--version", dest="version_flag", help="Simply print the version and exit. Can also be called as '-version', '-v', or '--v'", action="store_true", default=False);
 	# User options
+	parser.add_argument("--depcheck", dest="depcheck", help="Run this to check that all dependencies are installed at the provided path. No other options necessary.", action="store_true", default=False);
+	parser.add_argument("--dryrun", dest="dryrun", help="With all options provided, set this to run through the whole pseudo-it pipeline without executing external commands.", action="store_true", default=False);
+	# Run options
 	parser.add_argument("--norun", dest="norun", help=argparse.SUPPRESS, action="store_true", default=False);
-	parser.add_argument("--dryrun", dest="dryrun", help=argparse.SUPPRESS, action="store_true", default=False);
 	parser.add_argument("--debug", dest="debug_opt", help=argparse.SUPPRESS, action="store_true", default=False);
 	parser.add_argument("--nolog", dest="nolog_opt", help=argparse.SUPPRESS, action="store_true", default=False);
 	# Performance tests
 	args = parser.parse_args();
 	# The input options and help messages
+
+
+	globs, deps_passed = PC.execCheck(globs, args);
+	if args.depcheck:
+		if deps_passed:
+			sys.exit("\n# All dependencies PASSED.\n");
+		else:
+			sys.exit("\n# Some dependencies NOT FOUND. Please check your installations and provided paths.\n");
+	# Check the dependency paths.		
 
 	if args.norun:
 		globs['norun'] = True;
@@ -89,9 +100,6 @@ def optParse(globs):
 
 	PC.fileCheck(globs);
 	# Input file checking.
-
-	globs = PC.execCheck(globs, args);
-	# Check the dependency paths.
 
 	if args.resume:
 		if globs['overwrite']:

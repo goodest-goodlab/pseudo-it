@@ -38,11 +38,13 @@ def fileCheck(globs):
 
 def execCheck(globs, a):
 # Checks dependency executables.
+	deps_passed = True;
+	# Variable to check if all dependencies are found.
+
 	if a.bwa_path:
 		globs['bwa-path'] = a.bwa_path;
 	if a.picard_path:
 		globs['picard-path'] = a.picard_path;
-	#globs['picard-path'] = "java -jar " + globs['picard-path'];
 	if a.samtools_path:
 		globs['samtools-path'] = a.samtools_path;
 	if a.gatk_path:
@@ -51,23 +53,47 @@ def execCheck(globs, a):
 		globs['bedtools-path'] = a.bedtools_path;
 	if a.bcftools_path:
 		globs['bcftools-path'] = a.bcftools_path;
+	# Update the global paths if the user provided them through args.
 
-	for opt in ['bwa-path', 'picard-path', 'samtools-path', 'gatk-path', 'bedtools-path', 'bcftools-path']:
-		try:
-			cmd_result = subprocess.run(globs[opt], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE);
-		except:
-			prog = opt[:opt.index('-')];
-			if prog in ['bwa','gatk']:
-				prog = prog.upper();
-			elif prog == 'picard':
-				prog = prog.title();
-			errorOut("CORE2", prog + " not found at specified path: " + globs[opt], globs);
-	
-	cmd_result = subprocess.run("tabix", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE);
-	if cmd_result.returncode > 1:
-		errorOut("CORE2", "tabix program not found. Please install and ensure it is in your PATH.", globs);
+	dpad = 14;
+	if a.depcheck:
+		print("# --depcheck set: CHECKING DEPENDENCY PATHS AND EXITING.\n");
+		print(spacedOut("   PROGRAM", dpad) + spacedOut("PATH", dpad) + "STATUS");
+		print("   -------------------------------");
+	# For the dependency check option (--depcheck), this initializes a neat output table.
 
-	return globs;
+	for opt in ['bwa-path', 'picard-path', 'samtools-path', 'gatk-path', 'bedtools-path', 'bcftools-path', 'tabix-path']:
+		
+		prog = opt[:opt.index('-')];
+		if prog in ['bwa','gatk']:
+			prog = prog.upper();
+		elif prog == 'picard':
+			prog = prog.title();
+		# Get a formatted program name.
+
+		dcheck_str = [spacedOut("   " + prog, dpad), spacedOut(globs[opt], dpad), "NA"];
+		# Initialize the check string for --depcheck.
+
+		cmd_result = subprocess.run(globs[opt], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE);
+		# Run the provided command and retrieve the exit code.
+
+		if cmd_result.returncode > 1:
+		# If the exit code for the command run is greater than 1, the command isn't found.
+			dcheck_str[2] = "FAILED with exit code " + str(cmd_result.returncode);
+			deps_passed = False;
+			# Update the check string and keep going.
+			if not a.depcheck:	
+				errorOut("CORE2", prog + " not found at specified path: " + globs[opt], globs);
+			# On a normal run, exit immediately.
+		else:
+			dcheck_str[2] = "PASSED";
+			# Update the check string.
+			
+		if a.depcheck:
+			print("".join(dcheck_str));
+		# Print the check string if --depcheck is set.
+
+	return globs, deps_passed;
 
 #############################################################################
 
