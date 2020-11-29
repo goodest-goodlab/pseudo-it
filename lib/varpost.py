@@ -68,8 +68,8 @@ def varFilter(globs, cmds, cur_ref):
         bcftools_cmd = globs['bcftools-path'] + " filter -m+ -e " + globs['filter'] + "  -e 'ALT=\"*\"' -s pseudoit --IndelGap 5 -Oz -o " + filter_file + " " + vcf_file;
 
         cmd_num = PC.getCMDNum(globs, len(cmds));
-        cmds[bcftools_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Filter VCF " + scaff, 'outfile' : filter_file,  'logfile' : cur_logfile, 'start' : False };
-        bcftools_cmds[bcftools_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Filter VCF " + scaff, 'outfile' : filter_file,  'logfile' : cur_logfile, 'start' : False };
+        cmds[bcftools_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Filter VCF " + scaff, 'outfile' : filter_file,  'logfile' : cur_logfile, 'start' : False, "vcffile" : vcf_file };
+        bcftools_cmds[bcftools_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Filter VCF " + scaff, 'outfile' : filter_file,  'logfile' : cur_logfile, 'start' : False, "vcffile" : vcf_file };
 
     if globs['dryrun']:
         cmd_num = PC.getCMDNum(globs, len(cmds));

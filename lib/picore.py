@@ -126,6 +126,12 @@ def runCMD(cmd, globs, cmds, report_success):
 		return False;
 	# If this is a dry run, don't run the command.
 
+	ecodes = ['error', 'Error', 'ERROR', 'Exception', 'Could not build fai index', 
+				'AssertionError', "Can't read file", "Killed", "No such file or directory", 
+				"Symbolic alleles other than <DEL> are currently not supported",
+				"Failed to open", "The index file is older than the data file",
+				"command not found"]
+
 	run = True;
 	if globs['resume']:
 		run = runCheck(cmd, cmds, globs);
@@ -137,6 +143,23 @@ def runCMD(cmd, globs, cmds, report_success):
 		cmd_stdout = cmd_result.stdout.decode();
 		cmd_stderr = cmd_result.stderr.decode();
 		cmd_output = cmd_stdout + "\n\n" + cmd_stderr;
+
+		if "The index file is older than the data file" in cmd_output:
+			reindex_cmd = "tabix -fp vcf " + cmds[cmd]['vcffile'];
+			report_step(globs, cmds, cmd, "Re-indexing", reindex_cmd);
+			cmd_result = subprocess.run(reindex_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE);
+			if any(ecode in cmd_result.stderr.decode() for ecode in ecodes):
+				report_step(globs, cmds, cmd, "RE-INDEX ERROR!", "Check log: " + cmds[cmd]['logfile']);
+				return True;
+			else:
+				re_run_status = runCMD(cmd, globs, cmds, report_success);
+
+			if re_run_status:
+				return True;
+			else:
+				return False;
+		# This block handles re-indexing for VCF files if GATK indexes it too quickly.
+
 		printWrite(cmds[cmd]['logfile'], 3, "CMD:");
 		printWrite(cmds[cmd]['logfile'], 3, cmd + "\n");
 		printWrite(cmds[cmd]['logfile'], 3, "STDOUT output:");
@@ -144,11 +167,7 @@ def runCMD(cmd, globs, cmds, report_success):
 		printWrite(cmds[cmd]['logfile'], 3, "STDERR output:");
 		printWrite(cmds[cmd]['logfile'], 3, cmd_stderr + "\n");
 
-		if any(ecode in cmd_output for ecode in ['error', 'Error', 'ERROR', 'Exception', 'Could not build fai index', 
-															'AssertionError', "Can't read file", "Killed", "No such file or directory", 
-															"Symbolic alleles other than <DEL> are currently not supported",
-															"Failed to open", "The index file is older than the data file",
-															"tabix: command not found"]):
+		if any(ecode in cmd_output for ecode in ecodes):
 			report_step(globs, cmds, cmd, "ERROR!", "Check log: " + cmds[cmd]['logfile']);
 			return True;
 		elif report_success:
