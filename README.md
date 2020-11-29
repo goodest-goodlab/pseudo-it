@@ -26,7 +26,7 @@
     - [Options](#options)
     - [Resource allocation](#resource-allocation)
     - [Example commands](#example-commands)
-- [FAQs:](#faqs)
+- [FAQs](#faqs)
 
 # About
 
@@ -125,7 +125,7 @@ This should try to run each external program from within pseudo-it and print whe
 
     # All dependencies PASSED.
 
-# Usage:
+# Usage
 
 The most basic usage of pseudo-it would be a command as follows:
 
@@ -168,6 +168,23 @@ The most basic usage of pseudo-it would be a command as follows:
 | --version | Simply print the version and exit. Can also be called as `-version`, `-v`, or `--v`. |
 | -h | Print a help menu and exit. Can also be called as `--help`. |
 
+## Pre-indexing your reference genome
+
+Pseudo-it requires a reference genome in FASTA format. It also requires that this file be indexed in several ways. This indexing is kept separate from pseudo-it to ensure that the user has the most up-to-date indices for their file without risk of pseudo-it overwriting them.
+
+Before you run pseudo it you MUST run the following commands on your reference.fa file:
+
+1. Reference the file with samtools:
+
+        samtools faidx <reference.fa>
+
+2. Reference the file with BWA:
+
+        bwa index <reference.fa>
+
+3. Create a sequence dictionary with Picard:
+
+        picard CreateSequenceDictionary R=<reference.fa> O=<reference.dict>
 
 ## Resource allocation
 
@@ -205,7 +222,7 @@ This command allocates 48 total processes for pseudo-it to use. It would run all
 
 This command adds the `gatk-t 1` option to reduce the number of threads for HaplotypeCaller, thus reducing the total number of processes needed to `-p 12`. BWA mem would now run on each read set with only 4 threads.
 
-# FAQs:
+# FAQs
 
 **How many iterations should I perform?**
 
