@@ -61,9 +61,11 @@ def optParse(globs):
 	globs, deps_passed = PC.execCheck(globs, args);
 	if args.depcheck:
 		if deps_passed:
-			sys.exit("\n# All dependencies PASSED.\n");
+			print("\n# All dependencies PASSED.\n")
+			sys.exit(0);
 		else:
-			sys.exit("\n# Some dependencies NOT FOUND. Please check your installations and provided paths.\n");
+			print("\n# Some dependencies NOT FOUND. Please check your installations and provided paths.\n");
+			sys.exit(1);
 	# Check the dependency paths.		
 
 	if args.norun:

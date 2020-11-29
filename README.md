@@ -1,6 +1,7 @@
 # Pseudo-it
 ### Reference-guided genome assembly with iterative mapping
 
+[![Build Status](https://travis-ci.org/goodest-goodlab/pseudo-it.svg?branch=master)](https://travis-ci.org/goodest-goodlab/pseudo-it)
 [![License](https://img.shields.io/github/license/goodest-goodlab/pseudo-it)](https://github.com/goodest-goodlab/pseudo-it/LICENSE)
 
 ## Authors
