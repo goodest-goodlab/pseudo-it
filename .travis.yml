@@ -24,7 +24,8 @@ install:
   - conda env create --file pseudo-it.yml
   - conda activate pseudo-it
 
+  - pip install coverage
 
 # command to run tests
 script:
-  - python pseudo_it.py --depcheck
+  - coverage run pseudo_it.py --depcheck

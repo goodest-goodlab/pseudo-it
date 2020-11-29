@@ -28,7 +28,8 @@ if __name__ == '__main__':
 	globs = GV.init();
 	
 	if any(v in sys.argv for v in ["--version", "-version", "--v", "-v"]):
-		sys.exit("# Pesudo-it version " + globs['version'] + " released on " + globs['releasedate']);
+		print("# Pesudo-it version " + globs['version'] + " released on " + globs['releasedate'])
+		sys.exit(0);
 	# The version option to simply print the version and exit.
 
 	print("#");
@@ -42,7 +43,8 @@ if __name__ == '__main__':
 	# Getting the input parameters from optParse.
 
 	if globs['norun']:
-		sys.exit("# --norun SET. EXITING AFTER PRINTING OPTIONS INFO...\n#");
+		print("# --norun SET. EXITING AFTER PRINTING OPTIONS INFO...\n#")
+		sys.exit(0);
 
 	globs = pseudoit(globs);
 	PC.endProg(globs);
