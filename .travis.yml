@@ -1,6 +1,11 @@
 language: python
 # Define language
 
+os:
+  - linux
+  - osx
+# Define operating system's to test
+
 after_success:
   - coverage combine .coverage_*
   - bash <(curl -s https://codecov.io/bash)
@@ -16,7 +21,6 @@ python:
   - "3.8-dev"  # 3.8 development branch
   - "nightly"  # nightly build
 # Specify versions of language to test
-
 
 install:
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
