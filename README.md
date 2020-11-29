@@ -24,6 +24,7 @@
     - [Checking that all dependencies are installed](#checking-that-all-dependencies-are-installed)
 - [Usage](#usage)
     - [Options](#options)
+    - [Pre-indexing your reference genome](#pre-indexing-your-reference-genome)
     - [Resource allocation](#resource-allocation)
     - [Example commands](#example-commands)
 - [FAQs](#faqs)
