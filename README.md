@@ -1,6 +1,7 @@
 # Pseudo-it
 ### Reference-guided genome assembly with iterative mapping
 
+[![Python](https://goodest-goodlab.github.io/pseudo-it/docs/img/pybadge.svg)](https://www.python.org/)
 [![Build Status](https://travis-ci.org/goodest-goodlab/pseudo-it.svg?branch=master)](https://travis-ci.org/goodest-goodlab/pseudo-it)
 [![codecov](https://codecov.io/gh/goodest-goodlab/pseudo-it/branch/master/graph/badge.svg?token=3U2K65R611)](https://codecov.io/gh/goodest-goodlab/pseudo-it)
 [![Commit activity](https://img.shields.io/github/commit-activity/m/goodest-goodlab/pseudo-it)](https://github.com/goodest-goodlab/pseudo-it/commits/master)
