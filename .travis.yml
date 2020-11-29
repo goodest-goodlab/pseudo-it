@@ -3,7 +3,7 @@ language: python
 
 os:
   - linux
-  - osx
+  #- osx
 # Define operating system's to test
 
 after_success:
