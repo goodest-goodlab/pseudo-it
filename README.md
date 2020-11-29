@@ -8,10 +8,25 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/goodest-goodlab/pseudo-it)
 [![License](https://img.shields.io/github/license/goodest-goodlab/pseudo-it)](https://github.com/goodest-goodlab/pseudo-it/LICENSE)
 
-## Authors
-#### Gregg Thomas, Brice Sarver, and Jeff Good
+# Authors
+### Gregg Thomas, Brice Sarver, and Jeff Good
+&nbsp;
 
-## About
+# Table of Conetnts
+
+- [About](#about)
+    - [Citation](#citation)
+    - [Version History](#version-history)
+- [Installation](#installation)
+    - [Installing dependencies with conda](#installing-dependencies-with-conda)- [Verifying installation and dependencies](#verifying-installation-and-dependencies)
+    - [Testing the pseudo-it interface:](#testing-the-pseudo-it-interface)- [Checking that all dependencies are installed:](#checking-that-all-dependencies-are-installed)
+- [Usage](#usage)
+    - [Options](#options)
+    - [Resource allocation](#resource-allocation)
+    - [Example commands](#example-commands)
+- [FAQs:](#faqs)
+
+# About
 
 ### Pseudo-it is a program that uses an iterative read mapping process to generate pseudo-assemblies of closely related genomes to mitigate reference bias. 
 
@@ -31,11 +46,13 @@ Change log:
 * Now uses HaplotypeCaller from GATK4 for variant calling.
 * Now uses bcftools to generate the final consensus FASTA file, which allows the incorporation of indels and generates a chain file to preserve coordinate system from original reference.
 
-## Installation
+# Installation
 
 #### Pseudo-it is implemented in Python 3.
 
 Pseudo-it itself is simply a Python script that coordinates the running of other software.  Simply download the program and run it. You may want to add the Referee folder to your $PATH variable for ease of use.
+
+## Installing dependencies with conda
 
 Pseudo-it runs a suite of common bioinformatics software to go from raw reads in FASTQ format with a reference assembly in FASTA format to a pseudo-assembly of the reads in FASTA format. These programs are:
 
@@ -56,7 +73,7 @@ Then, start Anaconda:
 
 Load the environment:
 
-    conda env create --file psuedo-it.yml
+    conda env create --file pseudo-it.yml
 
 And finally, activate the environment:
 
@@ -64,7 +81,7 @@ And finally, activate the environment:
 
 Additionally, Pseudo-it relies on common *nix based commands such as `grep`/`zgrep` and `sed`. **As such, Pseudo-it can only be run on systems with those commands installed**
 
-### Verifying installation and dependencies
+## Verifying installation and dependencies
 
 If you have added pseudo-it folder to your $PATH, you can run it from any location in your file system simply by typing `pseudo_it.py`.
 
@@ -74,7 +91,7 @@ Without adding it to your $PATH you will need to explicitly invoke python and pr
 
 **All subsequent command examples assume you have added the pseudo-it folder to your $PATH**
 
-#### Testing the pseudo-it interface:
+### Testing the pseudo-it interface:
 
 To make sure pseudo_it can be called, simply use the version check:
     
@@ -84,17 +101,36 @@ This should print out something like this:
 
     # Pesudo-it version Beta 3.1 released on August 13, 2020
 
-#### Checking that all dependencies are installed:
+### Checking that all dependencies are installed:
 
-Option coming soon.
+To make sure all dependencies have been properly installed and the correct paths given, use the `--depcheck` option:
 
-## Usage
+    pseudo_it.py --depcheck
+
+This should try to run each external program from within pseudo-it and print whether it was able to successfully execute each one. If everything works, you should see a nice table:
+
+    # --depcheck set: CHECKING DEPENDENCY PATHS AND EXITING.
+
+    PROGRAM    PATH          STATUS
+    -------------------------------
+    BWA        bwa           PASSED
+    Picard     picard        PASSED
+    samtools   samtools      PASSED
+    GATK       gatk          PASSED
+    bedtools   bedtools      PASSED
+    bcftools   bcftools      PASSED
+    tabix      tabix         PASSED
+
+    # All dependencies PASSED.
+
+# Usage:
 
 The most basic usage of pseudo-it would be a command as follows:
 
     pseudo_it.py -ref [reference genome FASTA file] -pe1 [paired-end reads FASTQ file 1] -pe2 [paired-end reads FASTQ file 2] -i [number of iterations of mapping] -p [max number of processes to use] -o [desired output directory]
 
-### Options
+
+## Options
 
 **Use `pseudo_it.py -h` to print out a help menu listing all the options.**
 
@@ -130,6 +166,7 @@ The most basic usage of pseudo-it would be a command as follows:
 | --version | Simply print the version and exit. Can also be called as `-version`, `-v`, or `--v`. |
 | -h | Print a help menu and exit. Can also be called as `--help`. |
 
+
 ## Resource allocation
 
 In addition to our own efforts to speed up the programs that pseudo-it runs, those programs themselves may also have the option to specify multiple processes/threads. This means that the allocation of processes/threads across programs can be confusing, and this section will try to explain how this is done.
@@ -152,6 +189,8 @@ In addition to our own efforts to speed up the programs that pseudo-it runs, tho
 
     In the case of a fragmented assembly (i.e. 10 large scaffolds/chromosomes + 1000s of small scaffolds), you may want to specify one or two extra processes so the shorter scaffolds are not held up while the longer ones are being run.
 
+## Example commands
+
 ### An optimized command for all 3 types of reads and a fragmented assembly with 10 large scaffolds + 1000s of small scaffolds
 
     python pseudo_it.py -ref [reference genome FASTA file] -se [single-end reads FASTQ file] -pe1 [paired-end reads FASTQ file 1] -pe2 [paired-end reads FASTQ file 2] -pem [merged paired-end reads FASTQ file] -i 4 -p 48 -o [desired output directory]
@@ -163,3 +202,9 @@ This command allocates 48 total processes for pseudo-it to use. It would run all
     python pseudo_it.py -ref [reference genome FASTA file] -se [single-end reads FASTQ file] -pe1 [paired-end reads FASTQ file 1] -pe2 [paired-end reads FASTQ file 2] -pem [merged paired-end reads FASTQ file] -i 4 -p 12 -gatk-t 1 -o [desired output directory]
 
 This command adds the `gatk-t 1` option to reduce the number of threads for HaplotypeCaller, thus reducing the total number of processes needed to `-p 12`. BWA mem would now run on each read set with only 4 threads.
+
+# FAQs:
+
+**How many iterations should I perform?**
+
+This depends on the sequence divergence of your sample relative to your reference and the type of data you have. For exome data, I found that three iterations performs well for samples with ~7.5 million years of divergence. If you expect more or have quickly evolving loci (noncoding, etc.), you might need more.
