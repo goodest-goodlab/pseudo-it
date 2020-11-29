@@ -436,3 +436,39 @@
 	# if not globs['norun']:
 	# 	step_start_time = PC.report_stats(globs, stat_start=True);
 	# Initializing the stats options if --quiet is not set.
+
+#############################################################################
+
+# def selectSNPsScaff(globs, cmds):
+# # Run the command to select only SNPs from a VCF file.
+
+#     gatk_cmds = {};
+#     for scaff in globs['scaffolds']:
+#         cur_logfile = os.path.join(globs['itervcflogdir'], "gatk-selectvariants-iter-" + scaff + "-" + globs['iter-str'] + ".log")
+#         vcf_file = os.path.join(globs['itervcfscaffdir'], scaff + "-iter-" + globs['iter-str'] + ".vcf.gz");
+#         snp_file = os.path.join(globs['itervcfscaffdir'], scaff + "-iter-" + globs['iter-str'] + "-snps.vcf.gz");
+
+#         gatk_cmd = globs['gatk-path'] + " SelectVariants -V " + vcf_file + " -O " + snp_file + " -select-type SNP -xl-select-type INDEL -xl-select-type MIXED -xl-select-type SYMBOLIC";
+
+#         cmd_num = PC.getCMDNum(globs, len(cmds));
+#         cmds[gatk_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Select SNPs " + scaff, 'outfile' : vcf_file,  'logfile' : cur_logfile, 'start' : False };
+#         gatk_cmds[gatk_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Select SNPs " + scaff, 'outfile' : vcf_file,  'logfile' : cur_logfile, 'start' : False };
+
+#     if globs['dryrun']:
+#         cmd_num = PC.getCMDNum(globs, len(cmds));
+#         gatk_skeleton_cmd = globs['gatk-path'] + " SelectVariants -R <reference FASTA> -V <input vcf> -O <snp only vcf> -select-type SNP -xl-select-type INDEL -xl-select-type MIXED -xl-select-type SYMBOLIC";
+#         cmds[gatk_skeleton_cmd] = { 'cmd-num' : cmd_num, 'desc' : str(globs['num-procs']) + " SelectVariants procs in parallel", 'outfile' : "",  'logfile' : "", 'start' : False };
+#         PC.report_step(globs, cmds, gatk_skeleton_cmd, "DRYRUN", gatk_skeleton_cmd);
+
+#     else:
+#         pool = mp.Pool(processes=globs['num-procs']);
+#         for result in pool.starmap(PC.runCMD, ((gatk_cmd, globs, cmds, True) for gatk_cmd in gatk_cmds )):
+#             if result:
+#                 pool.terminate();
+#                 globs['exit-code'] = 1;
+#                 PC.endProg(globs);
+#         pool.terminate();    
+
+#     return cmds;
+
+#############################################################################

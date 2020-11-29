@@ -2,8 +2,9 @@ language: python
 # Define language
 
 after_success:
+  - coverage combine .coverage_*
   - bash <(curl -s https://codecov.io/bash)
-  # Sends coverage reports to codecov
+  # Combines and sends coverage reports to codecov
 # Define actions after successful build
 
 python:
@@ -43,5 +44,4 @@ script:
   - COVERAGE_FILE=.coverage_dep coverage run pseudo_it.py --depcheck
   - COVERAGE_FILE=.coverage_dry coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -o example-data/example-out/ -tmp tmp-pi-out -i 2 -p 8 --dryrun
   - COVERAGE_FILE=.coverage_full coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -o example-data/example-out/ -tmp tmp-pi-out -i 2 -p 8 --overwrite  
-  - coverage combine .coverage_*
 # Tests to run

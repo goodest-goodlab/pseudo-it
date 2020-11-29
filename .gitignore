@@ -1,6 +1,6 @@
 *.pyc
 *test*
-.coverage
+.coverage*
 *.errlog
 
 lib/__pycache__
