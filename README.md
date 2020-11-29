@@ -10,7 +10,6 @@
 
 # Authors
 ### Gregg Thomas, Brice Sarver, and Jeff Good
-&nbsp;
 
 # Table of Conetnts
 
@@ -132,10 +131,11 @@ The most basic usage of pseudo-it would be a command as follows:
 
     pseudo_it.py -ref [reference genome FASTA file] -pe1 [paired-end reads FASTQ file 1] -pe2 [paired-end reads FASTQ file 2] -i [number of iterations of mapping] -p [max number of processes to use] -o [desired output directory]
 
-
 ## Options
 
 **Use `pseudo_it.py -h` to print out a help menu listing all the options.**
+
+Note that only one of `-se`, `-pe1` and `-pe2`, or `-pem`, but any combination of the three read types is acceptable.
 
 | Option | Description | 
 | ------ | ----------- |
@@ -173,7 +173,7 @@ The most basic usage of pseudo-it would be a command as follows:
 
 Pseudo-it requires a reference genome in FASTA format. It also requires that this file be indexed in several ways. This indexing is kept separate from pseudo-it to ensure that the user has the most up-to-date indices for their file without risk of pseudo-it overwriting them.
 
-Before you run pseudo it you MUST run the following commands on your reference.fa file:
+Before you run pseudo it you MUST run the following commands on your `reference.fa` file:
 
 1. Reference the file with samtools:
 
