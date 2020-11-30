@@ -152,20 +152,20 @@ The most basic usage of pseudo-it would be a command as follows:
 
 **Use `pseudo_it.py -h` to print out a help menu listing all the options.**
 
-Note that only one of `-se`, `-pe1` and `-pe2`, or `-pem`, but any combination of the three read types is acceptable.
+Note that only one of `-se`, `-pe1` and `-pe2`, or `-pem` is required, but any combination of the three read types is acceptable.
 
 | Option | Description | 
 | ------ | ----------- |
-| -ref [FASTA file] | A FASTA formatted file containing the genome you wish to score. Can be gzip compressed or not. FASTA headers must match the sequence IDs in column one of the pileup or genotype log likelihood file. |
+| -ref [FASTA file] | A FASTA formatted file containing the genome you wish to map reads to in the first iteration. |
 | -se [FASTQ file] | A FASTQ file containing single-end reads. |
 | -pe1 [FASTQ file] | A FASTQ file containing pair 1 of paired-end reads. |
 | -pe2 [FASTQ file] | A FASTQ file containing pair 2 of paired-end reads. | 
 | -pem [FASTQ file] | A FASTQ file containing merged paired-end reads. |
 | -bam [BAM file] | OPTIONAL: A BAM file with the reads provided in `-se`, `-pe1` and `-pe2`, and/or `-pem` already mapped to the reference assembly. |
-| -f "[STRING]" | The expression to filter variants. Must conform to VCF INFO field standards. See [bcftools expressions](https://samtools.github.io/bcftools/bcftools.html#expressions) for more info. Default read depth filters are optimized for a 30-40X sequencing run -- adjust for your assembly. Default: "MQ < 30.0 || DP < 5 || DP > 60"
+| -f "[STRING]" | The expression to filter variants. Must conform to VCF INFO field standards. See [bcftools expressions](https://samtools.github.io/bcftools/bcftools.html#expressions) for more info. Default read depth filters are optimized for a 30-40X sequencing run -- adjust for your assembly. Default: `"MQ < 30.0 || DP < 5 || DP > 60"`
 | -i [INT] | The number of iterations of pseudo-it to run. Default: 4 |
-| -o [directory name] | The desired output directory. This will be created for you if it doesn't exist. Default: `pseudoit-out-[date]-[time]`. One of -o or -resume must be provided. |
-| -resume [directory name] | The path to a previous Pseudo-it directory to resume a run. Scans for presence of files and resumes when it can't find an expected file. One of -o or -resume must be provided. |
+| -o [directory name] | The desired output directory. This will be created for you if it doesn't exist. Default: `pseudoit-out-[date]-[time]`. One of `-o` or `-resume` must be provided. |
+| -resume [directory name] | The path to a previous Pseudo-it directory to resume a run. Scans for presence of files and resumes when it can't find an expected file. One of `-o` or `-resume` must be provided. |
 | -tmp [directory name] | OPTIONAL: Some programs write files to a temporary directory. If your default tmp dir is size limited, specify a new one here, or just specifiy 'tmp-pi-out' to have a folder called 'tmp' created and used within the main output folder. |
 | -p [INT] | The MAX number of processes Pseudo-it can use. It is highly recommended to run this with multiple processes. See [Resource allocation](#Resource-allocation) for more detail. |
 | -bwa-t [INT] | The number of threads for BWA mem to use for each FASTQ library. See [Resource allocation](#Resource-allocation) for more detail. Default: 1. |
@@ -176,6 +176,8 @@ Note that only one of `-se`, `-pe1` and `-pe2`, or `-pem`, but any combination o
 | -gatk [PATH STRING] | The path to the GATK progam. Default: gatk |
 | -bedtools [PATH STRING] | The path to the bedtools progam. Default: bedtools |
 | -bcftools [PATH STRING] | The path to the bcftools progam. Default: bcftools |
+| --depcheck | Check that all dependencies can be executed from within pseudo-it. Paths can be provided with the option for each program, or left as default. |
+| --dryrun | Run through all of the commands that would be run with the given inputs. Good to run to setup output directories and make sure pseudo-it will behave how you want it to. |
 | --maponly | Only do one iteration and stop after read mapping. |
 | --noindels | Set this to not incorporate indels into the final assembly. |
 | --diploid | Set this use IUPAC ambiguity codes in the final FASTA file. |
