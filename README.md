@@ -1,6 +1,6 @@
 # <p align="center"><img align="center" width="360" height="115" src="https://goodest-goodlab.github.io/pseudo-it/img/logo01.png"></p>
 
-### Pseudo-it: Reference-guided genome assembly with iterative mapping
+### <p align="center">Pseudo-it: Reference-guided genome assembly with iterative mapping</p>
 
 [![OS](https://goodest-goodlab.github.io/pseudo-it/img/osbadge.svg)](#Installation)
 [![Language](https://goodest-goodlab.github.io/pseudo-it/img/pybadge.svg)](https://www.python.org/)
@@ -12,7 +12,7 @@
 # Authors
 ### Gregg Thomas, Brice Sarver, and Jeff Good
 
-# Table of Conetnts
+# Table of Contents
 
 - [About](#about)
     - [Citation](#citation)
