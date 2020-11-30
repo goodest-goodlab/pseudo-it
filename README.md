@@ -1,4 +1,4 @@
-# Pseudo-it
+# Pseudo-it 
 ### Reference-guided genome assembly with iterative mapping
 
 [![OS](https://goodest-goodlab.github.io/pseudo-it/img/osbadge.svg)](#Installation)
