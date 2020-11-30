@@ -69,7 +69,7 @@ Change log:
 
 #### Pseudo-it is implemented in Python 3.
 
-Pseudo-it itself is simply a Python script that coordinates the running of other software.  Simply download the program and run it. You may want to add the Referee folder to your $PATH variable for ease of use.
+Pseudo-it itself is simply a Python script that coordinates the running of other software.  Simply download the program and run it. You may want to add the pseudo-it folder to your $PATH variable for ease of use.
 
 ## Installing dependencies with conda
 
