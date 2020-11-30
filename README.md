@@ -1,6 +1,6 @@
-# Pseudo-it <img align="right" width="200" height="64" src="https://goodest-goodlab.github.io/pseudo-it/img/logo01.png">
+# <center><img align="center" width="360" height="115" src="https://goodest-goodlab.github.io/pseudo-it/img/logo01.png"></center>
 
-### Reference-guided genome assembly with iterative mapping
+### Pseudo-it: Reference-guided genome assembly with iterative mapping
 
 [![OS](https://goodest-goodlab.github.io/pseudo-it/img/osbadge.svg)](#Installation)
 [![Language](https://goodest-goodlab.github.io/pseudo-it/img/pybadge.svg)](https://www.python.org/)
