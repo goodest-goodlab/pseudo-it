@@ -96,7 +96,7 @@ def mapping(globs):
         cmds = piref.getScaffs(globs['ref'], globs, cmds);
     # Check that all index files have been created and get the scaffold IDs from the reference FASTA
 
-    if globs['bam']:
+    if globs['bam'] and globs['iteration'] == 1:
         do_mapping = False;
     else:
         do_mapping = PC.prevCheck(globs['iter-final-bam'], globs['iter-final-bam-log'], globs);

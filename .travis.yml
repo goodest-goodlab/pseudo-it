@@ -13,13 +13,13 @@ after_success:
 # Define actions after successful build
 
 python:
-  - "3.4"
-  - "3.5"
+  #- "3.4"
+  #- "3.5"
   - "3.6"      # current default Python on Travis CI
-  - "3.7"
-  - "3.8"
-  - "3.8-dev"  # 3.8 development branch
-  - "nightly"  # nightly build
+  #- "3.7"
+  #- "3.8"
+  #- "3.8-dev"  # 3.8 development branch
+  #- "nightly"  # nightly build
 # Specify versions of language to test
 
 install:
@@ -51,4 +51,5 @@ script:
   - COVERAGE_FILE=.coverage_dry coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -o example-data/example-out/ -tmp tmp-pi-out -i 2 -p 8 --dryrun
   - COVERAGE_FILE=.coverage_full coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -o example-data/example-out/ -tmp tmp-pi-out -i 2 -p 8 --overwrite  
   - COVERAGE_FILE=.coverage_resume coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -resume example-data/example-out/ -tmp tmp-pi-out -i 2 -p 8
+  - COVERAGE_FILE=.coverage_premap coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -bam example-data/example-premap.bam.gz -o example-data/example-out-premap/ -tmp tmp-pi-out -i 2 -p 8 
 # Tests to run

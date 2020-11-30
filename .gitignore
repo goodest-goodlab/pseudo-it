@@ -7,5 +7,5 @@ lib/__pycache__
 pseudo-assemblies/
 job-scripts/
 scripts/
-example-data/example-out/
+example-data/example-out*/
 
