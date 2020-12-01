@@ -30,6 +30,8 @@ def mapping(globs):
     globs['iterlogdir'] = os.path.join(globs['iterdir'], "logs");
     for d in [ globs['iterdir'], globs['iterbamdir'], globs['itervcfdir'], globs['iterfadir'], globs['iterlogdir'] ]:
         if not os.path.isdir(d):
+            if globs['map-only'] and d not in [ globs['iterbamdir'], globs['iterlogdir'] ]:
+                continue;
             os.makedirs(d);
     if globs['last-iter']:
         globs['itervcfscaffdir'] = os.path.join(globs['itervcfdir'], "gvcf-scaff");
@@ -37,9 +39,10 @@ def mapping(globs):
     else:
         globs['itervcfscaffdir'] = os.path.join(globs['itervcfdir'], "vcf-scaff");
         globs['itervcflogdir'] = os.path.join(globs['itervcfdir'], "vcf-logs");
-    for d in [ globs['itervcfscaffdir'], globs['itervcflogdir'] ]:
-        if not os.path.isdir(d):
-            os.makedirs(d);
+    if not globs['map-only']:
+        for d in [ globs['itervcfscaffdir'], globs['itervcflogdir'] ]:
+            if not os.path.isdir(d):
+                os.makedirs(d);
     # Make directories for current iteration
 
     if globs['bam'] and globs['iteration'] == 1:
