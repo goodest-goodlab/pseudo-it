@@ -1,18 +1,12 @@
 # Parsing and printing the options and meta-info for Pseudo-it.
 # Much of the error checking is done here as well.
 #############################################################################
-import sys, os, math, lib.picore as PC
+import sys, os, argparse, math, lib.picore as PC
 #############################################################################
 
 def optParse(globs):
 # This function handles the command line options and prepares the output directory and files.
-	try:
-		import argparse;
-	except:
-		PC.errorOut("\n*** ERROR: Your installation of Python is missing the argparse module. Please try a different version of Python (3+) or install the module.\n")
-	# First check if the argparse module is installed. If not, the input options cannot be parsed.
-
-	parser = argparse.ArgumentParser(description="Pseudo-it: assembly by iterative mapping.");
+	parser = argparse.ArgumentParser(description="Pseudo-it: Genomes assembly by iterative mapping.");
 
 	parser.add_argument("-ref", dest="ref", help="The FASTA assembly to use for the initial mapping.", default=False);
 	parser.add_argument("-se", dest="se", help="A FASTQ file containing single-end reads. At least one of -se, -pe1 and pe2, or pem must be provided.", default=False);
@@ -56,7 +50,6 @@ def optParse(globs):
 	# Performance tests
 	args = parser.parse_args();
 	# The input options and help messages
-
 
 	globs, deps_passed = PC.execCheck(globs, args);
 	if args.depcheck:

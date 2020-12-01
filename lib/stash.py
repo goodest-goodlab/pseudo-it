@@ -472,3 +472,9 @@
 #     return cmds;
 
 #############################################################################
+
+	# try:
+	# 	import argparse;
+	# except:
+	# 	PC.errorOut("\n*** ERROR: Your installation of Python is missing the argparse module. Please try a different version of Python (3+) or install the module.\n")
+	# # First check if the argparse module is installed. If not, the input options cannot be parsed.
