@@ -51,7 +51,7 @@ def optParse(globs):
 	parser.add_argument("--dryrun", dest="dryrun", help="With all options provided, set this to run through the whole pseudo-it pipeline without executing external commands.", action="store_true", default=False);
 	# Run options
 	parser.add_argument("--norun", dest="norun", help=argparse.SUPPRESS, action="store_true", default=False);
-	parser.add_argument("--debug", dest="debug_opt", help=argparse.SUPPRESS, action="store_true", default=False);
+	# parser.add_argument("--debug", dest="debug_opt", help=argparse.SUPPRESS, action="store_true", default=False);
 	parser.add_argument("--nolog", dest="nolog_opt", help=argparse.SUPPRESS, action="store_true", default=False);
 	# Performance tests
 	args = parser.parse_args();
@@ -158,8 +158,8 @@ def optParse(globs):
 		globs['diploid'] = True;
 	# Diploid output option.
 
-	if args.debug_opt:
-		globs['debug'] = True;
+	# if args.debug_opt:
+	# 	globs['debug'] = True;
 	if args.nolog_opt:
 		globs['log-v'] = -1;
 	# Hidden test options
@@ -410,10 +410,10 @@ def startProg(globs):
 		PC.printWrite(globs['logfilename'], globs['log-v'], "# Running...");
 	# Reporting the quiet option.
 
-	if globs['debug']:
-		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --debug", pad) + 
-					PC.spacedOut("True", opt_pad) + 
-					"Printing out a bit of debug info.");
+	# if globs['debug']:
+	# 	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --debug", pad) + 
+	# 				PC.spacedOut("True", opt_pad) + 
+	# 				"Printing out a bit of debug info.");
 	# Reporting the debug option.
 
 	if globs['norun']:

@@ -208,9 +208,9 @@ def runCMD(cmd, globs, cmds, report_success):
 
 #############################################################################
 
-def getLogTime():
-# Function to get the date and time in a certain format.
-	return datetime.datetime.now().strftime("%I.%M.%S");
+# def getLogTime():
+# # Function to get the date and time in a certain format.
+# 	return datetime.datetime.now().strftime("%I.%M.%S");
 
 #############################################################################
 
