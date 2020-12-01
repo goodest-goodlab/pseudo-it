@@ -69,6 +69,9 @@ def indexFa(globs, cmds, cur_ref):
             cur_logfile = os.path.join(globs['iterlogdir'], "picard-dict-iter-" + globs['iter-str'] + ".log");
             dict_file = cur_ref.replace(ref_ext, ".dict");
 
+            if os.path.isfile(dict_file) and globs['overwrite']:
+                os.system("rm " + dict_file);
+
             picard_cmd = globs['picard-path'] + " CreateSequenceDictionary R=" + cur_ref + " O=" + dict_file;
             cmds[picard_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create reference dict", 'outfile' : dict_file, 'logfile' : cur_logfile, 'start' : False };
             index_cmds[picard_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create reference dict", 'outfile' : dict_file, 'logfile' : cur_logfile, 'start' : False };

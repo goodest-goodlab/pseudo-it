@@ -98,18 +98,24 @@ def mapping(globs):
 
     if globs['bam'] and globs['iteration'] == 1:
         do_mapping = False;
-    else:
+    elif globs['resume']:
         do_mapping = PC.prevCheck(globs['iter-final-bam'], globs['iter-final-bam-log'], globs);
+    else:
+        do_mapping = True;
 
     if do_mapping:
         do_varcalling = True;
-    else:
+    elif globs['resume']:
         do_varcalling = PC.prevCheck(globs['iter-final-vcf'], globs['iter-final-vcf-log'], globs);
+    else:
+        do_varcalling = True;
 
     if do_varcalling:
         do_consensus = True;
-    else:
+    elif globs['resume']:
         do_consensus = PC.prevCheck(globs['iter-final-fa'], globs['iter-consensus-log'], globs);
+    else:
+        do_consensus = True;
     # CHECK WHICH STEPS WE NEED TO PERFORM
 
     statstr = "EXECUTING";

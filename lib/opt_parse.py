@@ -324,6 +324,12 @@ def startProg(globs):
 					"Pseudo-it will keep ALL files from each iteration.");
 	# Reporting the intermediate files options.
 
+	if globs['overwrite']:
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --overwrite", pad) +
+					PC.spacedOut("True", opt_pad) + 
+					"Pseudo-it will OVERWRITE the existing files in the specified output directory.");
+	# Reporting the overwrite option.
+
 	if globs['resume']:
 		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -resume", pad) +
 					PC.spacedOut("True", opt_pad) + 

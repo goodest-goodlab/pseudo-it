@@ -45,11 +45,13 @@ install:
 # command to run tests
 script:
   - COVERAGE_FILE=.coverage_v coverage run pseudo_it.py --version
-  - COVERAGE_FILE=.coverage_deppass coverage run pseudo_it.py --depcheck
+  - COVERAGE_FILE=.coverage_deppass coverage run pseudo_it.py --depcheck -samtools samtools -picard picard -bwa bwa -gatk gatk -bedtools bedtools -bcftools bcftools
   #- COVERAGE_FILE=.coverage_depfail coverage run pseudo_it.py --depcheck -samtools test23895
-  - COVERAGE_FILE=.coverage_norun coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -o example-data/example-out/ -tmp tmp-pi-out -i 2 -p 8 --norun
-  - COVERAGE_FILE=.coverage_dry coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -o example-data/example-out/ -tmp tmp-pi-out -i 2 -p 8 --dryrun
-  - COVERAGE_FILE=.coverage_full coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -o example-data/example-out/ -tmp tmp-pi-out -i 2 -p 8 --overwrite  
-  - COVERAGE_FILE=.coverage_resume coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -resume example-data/example-out/ -tmp tmp-pi-out -i 2 -p 8
+  - COVERAGE_FILE=.coverage_norun coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -o example-data/example-out-paired/ -tmp tmp-pi-out -i 2 -p 8 --norun
+  - COVERAGE_FILE=.coverage_dry coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -o example-data/example-out-paired/ -tmp tmp-pi-out -i 2 -p 8 --dryrun
+  - COVERAGE_FILE=.coverage_paired coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -o example-data/example-out-paired/ -tmp tmp-pi-out -i 2 -p 8 --overwrite  
+  - COVERAGE_FILE=.coverage_full coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -se example-data/example.single.fq.gz -o example-data/example-out-full/ -tmp tmp-pi-out -i 2 -p 8
+  - COVERAGE_FILE=.coverage_overwrite coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -se example-data/example.single.fq.gz -o example-data/example-out-full/ -tmp tmp-pi-out -i 2 -p 8 --overwrite
+  - COVERAGE_FILE=.coverage_resume coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -se example-data/example.single.fq.gz -resume example-data/example-out-full/ -tmp tmp-pi-out -i 3 -p 8
   - COVERAGE_FILE=.coverage_premap coverage run pseudo_it.py -ref example-data/example.fa -pe1 example-data/example.pe1.fq.gz -pe2 example-data/example.pe2.fq.gz -bam example-data/example-premap.bam.gz -o example-data/example-out-premap/ -tmp tmp-pi-out -i 2 -p 8 
 # Tests to run
