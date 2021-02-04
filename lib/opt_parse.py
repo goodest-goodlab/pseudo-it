@@ -195,9 +195,11 @@ def optParse(globs):
 
 	if globs['num-procs'] > 20:
 		globs['gvcf-procs'] = 20;
+		globs['filter-procs'] = 20;
 	else:
 		globs['gvcf-procs'] = globs['num-procs'];
-	# Check if the number of proces requested is over the max allowed for GenotypeGVCFs.
+		globs['filter-procs'] = globs['num-procs']
+	# Check if the number of proces requested is over the max allowed for GenotypeGVCFs and bcftools filter.
 
 	if globs['num-procs'] < globs['gatk-t'] or globs['num-procs'] < globs['bwa-t']:
 		PC.errorOut("OP12", "-p must be greater than both -bwa-t and -gatk-t, else we can't spawn a single process efficiently.", globs);

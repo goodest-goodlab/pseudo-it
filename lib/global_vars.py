@@ -63,8 +63,9 @@ def init():
 
         'gatk-t' : 4,
         'gvcf-procs' : 1,
+        'filter-procs' : 1,
         # Number of threads for GATK's --native-pair-hmm-threads option and the number of procs
-        # to use for GenotypeGVCFs.
+        # to use for GenotypeGVCFs and bcftools filter.
 
         'filter' : '"MQ < 30.0 || FORMAT/DP < 5 || FORMAT/DP > 60"',
         # Variant filtration string default

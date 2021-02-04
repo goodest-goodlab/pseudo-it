@@ -44,7 +44,7 @@ def varFilter(globs, cmds, cur_ref):
         PC.report_step(globs, cmds, bcftools_skeleton_cmd, "DRYRUN", bcftools_skeleton_cmd);
 
     else:
-        pool = mp.Pool(processes=globs['num-procs']);
+        pool = mp.Pool(processes=globs['filter-procs']);
         for result in pool.starmap(PC.runCMD, ((bcftools_cmd, globs, cmds, True) for bcftools_cmd in bcftools_cmds )):
             if result:
                 pool.terminate();

@@ -156,7 +156,7 @@ def runCMD(cmd, globs, cmds, report_success):
 				'AssertionError', "Can't read file", "Killed", "No such file or directory", 
 				"Symbolic alleles other than <DEL> are currently not supported",
 				"Failed to open", "The index file is older than the data file",
-				"command not found"]
+				"command not found", "pthread_create failed"];
 
 	run = True;
 	if globs['resume']:
