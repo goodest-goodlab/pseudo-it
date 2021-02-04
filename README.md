@@ -216,7 +216,7 @@ In addition to our own efforts to speed up the programs that pseudo-it runs, tho
 
     For example, if one set of paired end reads were supplied (`-pe1` and `-pe2`) and `-p` was set to 9, BWA mem would use all 9 threads for that single read set.
 
-    If all three sets of reads are supplied (`-se`, `-pe1` and `-pe2`, and/or `-pem`) and `-p` was set to 9, BWA mem run all three sets simultaneously, each with 9 / 3 = 3 threads.
+    If all three sets of reads are supplied (`-se`, `-pe1` and `-pe2`, and `-pem`) and `-p` was set to 9, BWA mem run all three sets simultaneously, each with 9 / 3 = 3 threads.
 
     Alternatively, you can specify the number of threads reserved for all BWA mem processes with the `-bwa-t` option. In the case of all three sets of reads being supplied with `-p 9` BUT with `-bwa-t 2`, each read set will be mapped simultaneously, but this time with only 2 threads a piece.
 
