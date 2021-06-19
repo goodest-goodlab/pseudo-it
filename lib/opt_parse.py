@@ -29,9 +29,12 @@ def optParse(globs):
 	parser.add_argument("-i", dest="num_iters", help="The number of iterations Pseudo-it will run. Default: 4.", type=int, default=4);
 	parser.add_argument("-bwa-t", dest="bwa_threads", help="The number of threads for BWA mem to use for each library. If you specify -bwa-t 3 and have 3 libraries (and have at least -p 3), this means a total of 9 processes will be used during mapping. If left unspecified and -p is specified this will be determined automatically by dividing -p by the number of libraries you provide. Otherwise, default: 1.", default=False);
 	parser.add_argument("-gatk-t", dest="gatk_threads", help="The number of threads for GATK's Haplotype caller to use. If you specify -p 4 and -gatk-t 4, this means that a total of 16 processes will be used. GATK default: 4.", default=False);
+	parser.add_argument("-vcf", dest="vcf", help="A VCF with variants to IGNORE in the called data.", default=False);
 	parser.add_argument("-f", dest="filter", help="The expression to filter variants. Must conform to VCF INFO field standards. Default read depth filters are optimized for a 30-40X sequencing run -- adjust for your assembly. Default: \"MQ < 30.0 || DP < 5 || DP > 60\"", default=False);
 	parser.add_argument("-p", dest="processes", help="The MAX number of processes Pseudo-it can use. If -p is set to 12 and -gatk-t is set to 4, then Pseudo-it will spawn 3 GATK processes in parallel. Default: 1.", type=int, default=1);
 	# User params
+	parser.add_argument("--nomkdups", dest="no_mkdups", help="Do not run Picard's MarkDuplicates on mapped reads.", action="store_true", default=False);
+	parser.add_argument("--hardmask", dest="hard_mask", help="By default, low quality positions in the final consensus sequence will be soft-masked as lower-case nucleotides. Set this to hard-mask them as Ns.", action="store_true", default=False);
 	parser.add_argument("--maponly", dest="map_only", help="Only do one iteration and stop after read mapping.", action="store_true", default=False);
 	parser.add_argument("--noindels", dest="noindels", help="Set this to not incorporate indels into the final assembly.", action="store_true", default=False);
 	parser.add_argument("--diploid", dest="diploid", help="Set this use IUPAC ambiguity codes in the final FASTA file.", action="store_true", default=False);
@@ -81,9 +84,23 @@ def optParse(globs):
 	if args.bam:
 		globs['bam'] = args.bam;
 		globs['bam-index'] = args.bam + ".bai";
+	# Options if a pre-mapped BAM file is supplied
 
 	globs['se'], globs['pe1'], globs['pe2'], globs['pem'], globs['ref'] = args.se, args.pe1, args.pe2, args.pem, args.ref;
 	globs['num-libs'] = len( [ l for l in [globs['se'], globs['pe1'], globs['pem']] if l ] );
+
+	globs = PC.fileCheck(globs);
+	# Input file checking.
+
+	if args.no_mkdups:
+		globs['mkdups'] = False;
+	if args.hard_mask:
+		globs['softmask'] = False;
+	if args.vcf:
+		if not os.path.isfile(args.vcf):
+			PC.errorOut("OP4", "Cannot find file specified with -vcf: " + args.vcf, globs);
+		globs['in-vcf'] = args.vcf;
+	# Options for marking duplicates, hard vs. soft masking, and a vcf file to filter SNPs with.
 
 	for l in ['se', 'pe', 'pem']:
 		if l != 'pe':
@@ -93,14 +110,11 @@ def optParse(globs):
 			globs['libs'][l] = globs[l+"1"] + " " + globs[l+"2"];
 	# Restructure the FASTQ libraries into a single dictionary.
 
-	PC.fileCheck(globs);
-	# Input file checking.
-
 	if args.resume:
 		if globs['overwrite']:
-			PC.errorOut("OP4", "--overwrite cannot be specified with --resume.", globs);
+			PC.errorOut("OP5", "--overwrite cannot be specified with --resume.", globs);
 		if not os.path.isdir(args.resume):
-			PC.errorOut("OP5", "Directory specified by --resume does not exist!", globs);
+			PC.errorOut("OP6", "Directory specified by --resume does not exist!", globs);
 		globs['resume'] = True;
 		globs['outdir'] = args.resume;
 	# Check for resume flag.
@@ -112,7 +126,7 @@ def optParse(globs):
 			globs['outdir'] = args.out_dest;
 
 		if not globs['overwrite'] and os.path.exists(globs['outdir']):
-			PC.errorOut("OP6", "Output directory already exists: " + globs['outdir'] + ". Specify new directory name, set --overwrite to overwrite, or set -resume to resume.", globs);
+			PC.errorOut("OP7", "Output directory already exists: " + globs['outdir'] + ". Specify new directory name, set --overwrite to overwrite, or set -resume to resume.", globs);
 
 		if not os.path.isdir(globs['outdir']) and not globs['norun']:
 			os.makedirs(globs['outdir']);
@@ -136,7 +150,7 @@ def optParse(globs):
 	# Output prep.
 
 	if args.keep_all and args.keep_only_final:
-		PC.errorOut("OP7", "Only one of --keepall and --keeponlyfinal can be set.", globs);
+		PC.errorOut("OP8", "Only one of --keepall and --keeponlyfinal can be set.", globs);
 	elif args.keep_all:
 		globs['keeplevel'] = 2;
 	elif args.keep_only_final:
@@ -159,7 +173,7 @@ def optParse(globs):
 
 	globs['num-iters'] = PC.isPosInt(args.num_iters);
 	if globs['num-iters'] < 1:
-		PC.errorOut("OP8", "-i must be an integer value greater than 1.", globs);
+		PC.errorOut("OP9", "-i must be an integer value greater than 1.", globs);
 	# Checking the number of iterations option.
 
 	if args.map_only:
@@ -169,18 +183,19 @@ def optParse(globs):
 
 	if args.filter:
 		globs['filter'] = args.filter;
+	globs['filter'] = globs['filter'][:-1] + " || ALT=\"*\"'";
 	# Check the filter option.
 
 	globs['num-procs'] = PC.isPosInt(args.processes);
 	if not globs['num-procs']:
-		PC.errorOut("OP9", "-p must be an integer value greater than 1.", globs);
+		PC.errorOut("OP10", "-p must be an integer value greater than 1.", globs);
 	# Checking the number of processors option.
 
 	if not args.bam:
 		if args.bwa_threads:
 			globs['bwa-t'] = PC.isPosInt(args.bwa_threads);
 			if not globs['bwa-t']:
-				PC.errorOut("OP10", "-bwa-t must be an integer value greater than 1.", globs);
+				PC.errorOut("OP11", "-bwa-t must be an integer value greater than 1.", globs);
 		elif globs['num-procs'] != 1:
 			globs['bwa-t'] = math.floor(globs['num-procs'] / globs['num-libs']);
 	# Getting the number of BWA mem threads.
@@ -188,7 +203,7 @@ def optParse(globs):
 	if args.gatk_threads:
 		globs['gatk-t'] = PC.isPosInt(args.gatk_threads);
 		if not globs['gatk-t']:		
-			PC.errorOut("OP11", "-gatk-t must be an integer value greater than 1.", globs);
+			PC.errorOut("OP12", "-gatk-t must be an integer value greater than 1.", globs);
 	if globs['map-only']:
 		globs['gatk-t'] = 1;
 	# Getting the number of GATK HaplotypeCaller threads
@@ -202,7 +217,7 @@ def optParse(globs):
 	# Check if the number of proces requested is over the max allowed for GenotypeGVCFs and bcftools filter.
 
 	if globs['num-procs'] < globs['gatk-t'] or globs['num-procs'] < globs['bwa-t']:
-		PC.errorOut("OP12", "-p must be greater than both -bwa-t and -gatk-t, else we can't spawn a single process efficiently.", globs);
+		PC.errorOut("OP13", "-p must be greater than both -bwa-t and -gatk-t, else we can't spawn a single process efficiently.", globs);
 	# Check that the procs requested between programs are compatible
 
 	procs_needed = globs['num-libs'] * globs['bwa-t'];
@@ -331,6 +346,16 @@ def startProg(globs):
 					"Pseudo-it will attempt to resume the run from the specified directory.");
 	# Reporting the resume option.
 
+	if not globs['mkdups']:
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --nomkdup", pad) +
+					PC.spacedOut("True", opt_pad) + 
+					"Pseudo-it will NOT mark duplicate reads in BAM files with picard MarkDuplicates.");
+	else:
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --nomkdup", pad) +
+					PC.spacedOut("False", opt_pad) + 
+					"Pseudo-it will mark duplicate reads in BAM files with picard MarkDuplicates.");		
+	# Reporting the mkdups option.	
+
 	if not globs['map-only']:
 		if globs['indels']:
 			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --noindels", pad) + 
@@ -340,7 +365,7 @@ def startProg(globs):
 			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --noindels", pad) + 
 						PC.spacedOut("True", opt_pad) + 
 						"Final assembly will NOT incorporate indels.");		
-	# Reporting --noindels option.
+		# Reporting --noindels option.
 
 		if globs['diploid']:
 			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --diploid", pad) + 
@@ -351,6 +376,22 @@ def startProg(globs):
 						PC.spacedOut("False", opt_pad) + 
 						"Final assembly will NOT use IUPAC ambiguity codes for variant sites.");		
 		# Reporting --diploid option.
+
+		if globs['softmask']:
+			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --hardmask", pad) + 
+						PC.spacedOut("False", opt_pad) + 
+						"Filtered sites in final consensus will be soft-masked (atcg).");
+		else:
+			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --hardmask", pad) + 
+						PC.spacedOut("True", opt_pad) + 
+						"Filtered sites in final consensus will be hard-masked (Ns).");		
+		# Reporting --diploid option.
+
+		if globs['in-vcf']:
+			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -vcf", pad) + 
+						PC.spacedOut(globs['in-vcf'], opt_pad) + 
+						"Ignoring SNPs in file.");
+		# Reporting -vcf option.		
 
 	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -i", pad) + 
 				PC.spacedOut(str(globs['num-iters']), opt_pad) + 

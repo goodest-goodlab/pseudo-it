@@ -31,8 +31,11 @@ def fileCheck(globs):
 	if globs['bam']:
 		files += ['bam', 'bam-index'];
 	for opt in files:
-		if globs[opt] and not os.path.isfile(globs[opt]):
-			errorOut("CORE1", "File not found: " + globs[opt], globs);
+		if globs[opt]:
+			if not os.path.isfile(globs[opt]):
+				errorOut("CORE1", "File not found: " + globs[opt], globs);
+			globs[opt] = os.path.abspath(globs[opt]);
+	return globs;
 
 #############################################################################
 
@@ -205,6 +208,20 @@ def runCMD(cmd, globs, cmds, report_success):
 			return True;
 	else:
 		return False;
+
+#############################################################################
+
+def readVCF(vcffile):
+	iupac = {"A":["A"], "T":["T"], "C":["C"], "G":["G"], "R":["A","G"], "Y":["C","T"], "S":["G","C"], "W":["A","T"], "K":["G","T"], "M":["A","C"], 
+				"B":["C","G","T"], "D":["A","G","T"], "H":["A","C","T"], "V":["A","C","G"], "N":["A","T","C","G"], ".":["-"] };
+	vcflines = [ line.strip().split("\t") for line in open(vcffile) if not line.startswith("#") ];
+	for i in range(len(vcflines)):
+		nts = vcflines[i][3].split(",");
+		new_nts = [];
+		for nt in nts:
+			new_nts += iupac[nt];
+		vcflines[i][3] = list(set(new_nts));
+	return vcflines;
 
 #############################################################################
 

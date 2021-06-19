@@ -30,7 +30,7 @@ def BWA(globs, cmds, cur_ref):
         read_group = "@RG\\tID:" + read_group_id;
         read_group += "\\tPL:ILLUMINA";
         read_group += "\\tPU:" + read_group_id;
-        read_group += "\\tLB:" + globs['sample-name'] + "-pseudoit-iter-" + globs['iter-str'] + "-" + lib_type;
+        read_group += "\\tLB:" + globs['sample-name'] + "-pseudoit-iter-" + globs['iter-str']# + "-" + lib_type;
         read_group += "\\tSM:" + globs['sample-name'];
         # Extract read group info from first line.
         # Assumes all reads in fastq file are from same run.
@@ -41,7 +41,10 @@ def BWA(globs, cmds, cur_ref):
         bamfile = os.path.join(globs['iterbamdir'], lib_type + "-iter-" + globs['iter-str'] + ".bam.gz");
         bamfiles.append(bamfile);
 
-        bwa_cmd = globs['bwa-path'] + " mem -t " + str(globs['bwa-t']) + " -R '" + read_group + "' " + cur_ref + " " + globs['libs'][lib_type] + " | " + globs['samtools-path'] + " sort | " + globs['samtools-path'] + " view -bh - > " + bamfile;
+        bwa_cmd = globs['bwa-path'] + " mem -t " + str(globs['bwa-t']) + " -M -R '" + read_group + "' " + cur_ref + " " + globs['libs'][lib_type];
+        bwa_cmd += " | " + globs['samtools-path'] + " sort";
+        bwa_cmd += " | " + globs['samtools-path'] + " view -bh -";
+        bwa_cmd += " > " + bamfile;
         cmd_num = PC.getCMDNum(globs, len(cmds))
         cmds[bwa_cmd] = { 'cmd-num' : cmd_num, 'desc' : "BWA " + lib_type + " read mapping", 'outfile' : bamfile,  'logfile' : cur_logfile, 'start' : False };
 
@@ -114,6 +117,8 @@ def mergeBam(globs, cmds, bamfiles):
             merge_cmd += "I=" + bamfile + " ";
         if globs['tmpdir'] != "System default.":
             merge_cmd += "TMP_DIR=\"" + globs['tmpdir'] + "\" ";
+        if not globs['mkdups']:
+            merge_cmd += "CREATE_INDEX=true ";
         merge_cmd += "USE_THREADING=TRUE VALIDATION_STRINGENCY=LENIENT O=" + merged_bamfile;
 
         cmds[merge_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Merge BAM files", 'outfile' : merged_bamfile, 'logfile' : cur_logfile, 'start' : False };

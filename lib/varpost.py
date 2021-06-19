@@ -31,7 +31,7 @@ def varFilter(globs, cmds, cur_ref):
         vcf_file = os.path.join(globs['itervcfscaffdir'], scaff + "-iter-" + globs['iter-str'] + ".vcf.gz");
         filter_file = os.path.join(globs['itervcfscaffdir'], scaff + "-iter-" + globs['iter-str'] + "-filter.vcf.gz");
 
-        bcftools_cmd = globs['bcftools-path'] + " filter -m+ -e " + globs['filter'] + "  -e 'ALT=\"*\"' -s pseudoit --IndelGap 5 -Oz -o " + filter_file + " " + vcf_file;
+        bcftools_cmd = globs['bcftools-path'] + " filter -m+ -e " + globs['filter'] + " -s pseudoit --IndelGap 5 -Oz -o " + filter_file + " " + vcf_file;
 
         cmd_num = PC.getCMDNum(globs, len(cmds));
         cmds[bcftools_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Filter VCF " + scaff, 'outfile' : filter_file,  'logfile' : cur_logfile, 'start' : False, "vcffile" : vcf_file };
@@ -53,6 +53,52 @@ def varFilter(globs, cmds, cur_ref):
         pool.terminate();    
 
     return cmds;
+
+#############################################################################
+
+def varFilterManual(globs, cmds):
+# This function is meant for filtering SNPs from the called set for each iteration based on
+# an inpute VCF provided by -vcf. This implementation first unzips the iteration vcf file,
+# loops through it and for each SNP checks the set from the input VCF. Then it re-zips the
+# iteration vcf. This is very slow and meant only for small genomes/numbers of SNPs. 
+# Specifically implemented for SARS-CoV-2 genomes.
+
+    for scaff in globs['scaffolds']:
+        if globs['dryrun']:
+            PC.report_step(globs, cmds, "NA Filtering variants from input VCF", "DRYRUN", globs['in-vcf']);
+        else:
+            PC.report_step(globs, cmds, "NA Filtering variants from input VCF", "EXECUTING", globs['in-vcf']);
+            filter_file = os.path.join(globs['itervcfscaffdir'], scaff + "-iter-" + globs['iter-str'] + "-filter.vcf.gz");
+            filter_file_unzipped = filter_file.replace(".gz", "");
+            os.system("gunzip " + filter_file);
+            vcflines = [ line.strip().split("\t") for line in open(filter_file_unzipped) ];
+            # Unzip and read the iteration VCF file.
+
+            num_filtered = 0;
+            for i in range(len(vcflines)):
+                if vcflines[i][0].startswith("#"):
+                    continue;
+                # Check each SNP in the VCF file; skip the header lines.
+
+                for snp in globs['filter-sites']:
+                    if vcflines[i][1] == snp[1] and vcflines[i][4] in snp[4]:
+                        if vcflines[i][6] == "PASS":
+                           vcflines[i][6] = "pseudoit";
+                        elif "pseudoit" not in vcflines[i][6]:
+                            vcflines[i][6] += "pseudoit";
+                        num_filtered += 1;
+                # Check each SNP in the provided -vcf file. If it matches the current SNP, add the filter string to the
+                # FILTER column.
+
+            with open(filter_file_unzipped, "w") as new_vcf:
+                for line in vcflines:
+                     new_vcf.write("\t".join(line) + "\n");
+            # Re-write the iteration VCF file.
+
+            os.system("bgzip " + filter_file_unzipped);
+            # Re-compress the iteration VCF file.
+
+            PC.report_step(globs, cmds, "NA " + str(num_filtered) + " sites filtered", "SUCCESS", globs['in-vcf']);
 
 #############################################################################
 

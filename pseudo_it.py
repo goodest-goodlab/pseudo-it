@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #############################################################################
 # Iterative read-mapping and variant calling for pseudo-reference assembly
 # This is the main interface.

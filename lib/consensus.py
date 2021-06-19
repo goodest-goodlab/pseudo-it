@@ -52,7 +52,10 @@ def maskFa(globs, cmds, mask_bedfile, cur_ref):
         cur_logfile = os.path.join(globs['iterlogdir'], "bedtools-maskfasta-" + globs['iter-str'] + "-snps.log");
         mask_ref = os.path.join(globs['iterfadir'], "iter-" + prev_iter + "-snps-masked.fa");
 
-    mask_cmd = globs['bedtools-path'] + " maskfasta -fi " + cur_ref + " -bed " + mask_bedfile + " -soft -fo " + mask_ref;
+    mask_cmd = globs['bedtools-path'] + " maskfasta -fi " + cur_ref + " -bed " + mask_bedfile;
+    if globs['softmask']:
+        mask_cmd += " -soft"
+    mask_cmd += " -fo " + mask_ref;
     cmds[mask_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Softmask reference", 'outfile' : mask_ref, 'logfile' : cur_logfile, 'start' : False };
     
     exit_flag = PC.runCMD(mask_cmd, globs, cmds, True);
@@ -74,7 +77,7 @@ def genConsensus(globs, cmds, vcf_file, cur_ref):
         bcftools_cmd += " -c " + globs['iter-final-chain'];
     if globs['last-iter'] and globs['diploid']:
         bcftools_cmd += " -I ";
-    bcftools_cmd += " -e \"FILTER='pseudoit'\" " + vcf_file;
+    bcftools_cmd += " -e \"FILTER='pseudoit' || FILTER='IndelGap'\" " + vcf_file;
     cmds[bcftools_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Generating consensus", 'outfile' : globs['iter-final-fa'], 'logfile' : globs['iter-consensus-log'], 'start' : False };
 
     run_flag = True;

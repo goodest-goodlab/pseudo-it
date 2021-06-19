@@ -48,9 +48,14 @@ def mapping(globs):
     if globs['bam'] and globs['iteration'] == 1:
         globs['iter-final-bam-log'] = "NA";
         globs['iter-final-bam'] = globs['bam'];  
-    else:      
-        globs['iter-final-bam-log'] = os.path.join(globs['iterlogdir'], "picard-mkdup-iter-" + globs['iter-str'] + ".log");
-        globs['iter-final-bam'] = os.path.join(globs['iterbamdir'], "merged-rg-mkdup-iter-" + globs['iter-str'] + ".bam.gz");
+    else:
+        if globs['mkdups']:
+            globs['iter-final-bam-log'] = os.path.join(globs['iterlogdir'], "picard-mkdup-iter-" + globs['iter-str'] + ".log");
+            globs['iter-final-bam'] = os.path.join(globs['iterbamdir'], "merged-rg-mkdup-iter-" + globs['iter-str'] + ".bam.gz");
+        else:
+            globs['iter-final-bam-log'] = os.path.join(globs['iterlogdir'], "picard-merge-bam-iter-" + globs['iter-str'] + ".log");
+            globs['iter-final-bam'] = os.path.join(globs['iterbamdir'], "merged-iter-" + globs['iter-str'] + ".bam.gz");
+        # If --nomkdup is set, the final BAM file for each iteration should not have the mkdup suffix.        
     # Final BAM file for this iteration
 
     if globs['last-iter']:
@@ -130,6 +135,13 @@ def mapping(globs):
 
     if globs['iteration'] != 1:
         cmds = piref.indexFa(globs, cmds, cur_ref);
+    else:
+        if globs['in-vcf']:
+            PC.report_step(globs, cmds, "NA--00   Reading input VCF", statstr, "Reading input SNPs to ignore during variant calling.");
+            if not globs['dryrun']:
+                globs['filter-sites'] = PC.readVCF(globs['in-vcf']);
+        # If a VCF file has been provided to filter SNPs with -vcf, read those SNPs here. This is slow, meant for a small number of SNPs
+        # only.
     # INDEX FASTA IF NOT FIRST ITERATION
 
     if do_mapping:
@@ -142,9 +154,11 @@ def mapping(globs):
 
         merged_bamfile, cmds = pimap.mergeBam(globs, cmds, bamfiles);
         # MERGE BAM FILES also sorts
-
-        cmds = pimap.markDups(globs, cmds, merged_bamfile);
+        
+        if globs['mkdups']:
+            cmds = pimap.markDups(globs, cmds, merged_bamfile);
         # MARK DUPLICATES
+        
     elif globs['bam'] and globs['iteration'] == 1:
         PC.report_step(globs, cmds, "NA--01   Read mapping", "BAM", "initial BAM file provided, skipping all mapping steps: " + globs['iter-final-bam']);
     else:
@@ -182,6 +196,10 @@ def mapping(globs):
 
         cmds = varpost.varFilter(globs, cmds, cur_ref);
         # FILTER VCFs
+
+        if globs['in-vcf']:
+            varpost.varFilterManual(globs, cmds);
+        # If a vcf file has been provided for filtering SNPs with -vcf, do that filtering here.
 
         cmds = varpost.gatherVCFs(globs, cmds);
         # COMBINE VCF

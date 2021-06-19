@@ -8,4 +8,7 @@ pseudo-assemblies/
 job-scripts/
 scripts/
 example-data/example-out*/
+*.code-workspace
+.vscode/
+simulations/
 

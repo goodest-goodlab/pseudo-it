@@ -47,6 +47,10 @@ def init():
         'overwrite' : False,
         'final' : False,
         'keeplevel' : 1,
+        'mkdups' : True,
+        'softmask' : True,
+        'in-vcf' : False,
+        'filter-sites' : False,
         # I/O options
         
         'bwa-path' : 'bwa',
@@ -67,7 +71,7 @@ def init():
         # Number of threads for GATK's --native-pair-hmm-threads option and the number of procs
         # to use for GenotypeGVCFs and bcftools filter.
 
-        'filter' : '"MQ < 30.0 || FORMAT/DP < 5 || FORMAT/DP > 60"',
+        'filter' : "'MQ < 30.0 || FORMAT/DP < 5 || FORMAT/DP > 60'",
         # Variant filtration string default
 
         'num-procs' : 1,
