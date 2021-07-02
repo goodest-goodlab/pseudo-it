@@ -16,6 +16,7 @@ def indexCheck(cur_fa, globs, cmds):
     if not os.path.isfile(dictfile):
         PC.errorOut("REF1", "Reference dictionary not found. Please run: picard CreateSequenceDictionary R=<ref>.fa O=<ref>.dict", globs);
     PC.report_step(globs, cmds, cmd, "SUCCESS", "index file found", "");
+    # Check for the reference dictionary file.
 
     faidxfile = cur_fa + ".fai";
     cmd = "os.path.isfile(" + faidxfile + ")";
@@ -24,14 +25,27 @@ def indexCheck(cur_fa, globs, cmds):
     if not os.path.isfile(faidxfile):
         PC.errorOut("REF2", "Reference index (samtools) not found. Please run: samtools faidx <ref>.fa", globs);
     PC.report_step(globs, cmds, cmd, "SUCCESS", "index file found");
-        
-    indexfiles = [cur_fa + ".amb", cur_fa + ".ann", cur_fa + ".bwt", cur_fa + ".pac", cur_fa + ".sa"];
-    cmd = "os.path.isfile(" + ",".join(indexfiles) + ")";
-    cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Checking ref indices", 'outfile' : "", 'logfile' : "", 'start' : False };
-    PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
-    if any(not os.path.isfile(f) for f in indexfiles):
-        PC.errorOut("REF3", "Reference index (bwa) not found. Please run: bwa index <ref>.fa", globs);
-    PC.report_step(globs, cmds, cmd, "SUCCESS", "index files found");
+    # Check for the reference faidx file.
+
+    if globs['mapper'] == "bwa":    
+        indexfiles = [cur_fa + ".amb", cur_fa + ".ann", cur_fa + ".bwt", cur_fa + ".pac", cur_fa + ".sa"];
+        cmd = "os.path.isfile(" + ",".join(indexfiles) + ")";
+        cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Checking ref indices", 'outfile' : "", 'logfile' : "", 'start' : False };
+        PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
+        if any(not os.path.isfile(f) for f in indexfiles):
+            PC.errorOut("REF3", "Reference index (bwa) not found. Please run: bwa index <ref>.fa", globs);
+        PC.report_step(globs, cmds, cmd, "SUCCESS", "index files found");
+    # Check for the bwa index files if --mapper is bwa.
+
+    elif globs['mapper'] == "hisat2":
+        indexfile = cur_fa + ".1.ht2";
+        cmd = "os.path.isfile(" + indexfile + ")";
+        cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Checking ref indices", 'outfile' : "", 'logfile' : "", 'start' : False };
+        PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
+        if not os.path.isfile(indexfile):
+            PC.errorOut("REF3", "Reference index (hisat2) not found. Please run: hisat2-build <ref>.fa <ref>.fa", globs);
+        PC.report_step(globs, cmds, cmd, "SUCCESS", "index file found");
+    # Check for the hisat2 index files if --mapper is hisat2.        
 
     return cmds;
 
@@ -41,7 +55,11 @@ def getScaffs(cur_fa, globs, cmds, report_status=True):
 # Save the list of scaffolds/contigs/chromosomes from a FASTA file to a text file.
 
     cmd = "grep \">\" " + cur_fa + " | sed 's/>//g'"# > " + globs['scaffs'];
+    # grep the number of scaffolds in the reference... I guess this could also be done by just reading
+    # the number of lines in the index file...
+
     cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Get ref scaffold IDs", 'outfile' : "", 'logfile' : "", 'start' : False };
+    # Add the grep command to the global commands dict.
 
     if not globs['dryrun']:
         PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
@@ -49,21 +67,26 @@ def getScaffs(cur_fa, globs, cmds, report_status=True):
         cur_scaffs = list(filter(None, cmd_result.stdout.decode().split("\n")));
         globs['scaffolds'] = [ scaff[:scaff.index(" ")] if " " in scaff else scaff for scaff in cur_scaffs ];
         PC.report_step(globs, cmds, cmd, "SUCCESS", str(len(globs['scaffolds'])) + " scaffold IDs read");
-
-        return cmds;
     else:
         PC.report_step(globs, cmds, cmd, "DRYRUN", cmd);
         globs['scaffolds'] = [];
-        return cmds
+    # Run the grep command and check for errors..
+        
+    return cmds;
 
 #############################################################################
 
 def indexFa(globs, cmds, cur_ref):
-# Creates all reference fasta index files
+# Creates all reference fasta index files for subsequent iterations. For the first
+# iteration these are assumed to be created before the program is run.
 
     indices = ['dict', 'faidx', 'index'];
+    # The types of indices needed: .dict from picard, .fai from samtools, and the current --mapper index files.
+
     index_cmds = {};
     ref_ext = PC.detectRefExt(cur_ref, globs);
+    # Detect whether the reference is compressed or not.
+
     for step in indices:
         if step == 'dict':
             cur_logfile = os.path.join(globs['iterlogdir'], "picard-dict-iter-" + globs['iter-str'] + ".log");
@@ -75,6 +98,7 @@ def indexFa(globs, cmds, cur_ref):
             picard_cmd = globs['picard-path'] + " CreateSequenceDictionary R=" + cur_ref + " O=" + dict_file;
             cmds[picard_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create reference dict", 'outfile' : dict_file, 'logfile' : cur_logfile, 'start' : False };
             index_cmds[picard_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create reference dict", 'outfile' : dict_file, 'logfile' : cur_logfile, 'start' : False };
+        # Create the reference dictionary by running picard CreateSequenceDictionary
 
         if step == "faidx":
             cur_logfile = os.path.join(globs['iterlogdir'], "samtools-faidx-iter-" + globs['iter-str'] + ".log");
@@ -83,14 +107,26 @@ def indexFa(globs, cmds, cur_ref):
             faidx_cmd = globs['samtools-path'] + " faidx " + cur_ref;
             cmds[faidx_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create reference faidx", 'outfile' : faidx_file, 'logfile' : cur_logfile, 'start' : False };
             index_cmds[faidx_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create reference faidx", 'outfile' : faidx_file, 'logfile' : cur_logfile, 'start' : False };
+        # Create the reference index by running samtools faidx
 
         if step == "index":
-            cur_logfile = os.path.join(globs['iterlogdir'], "bwa-index-iter-" + globs['iter-str'] + ".log");
-            index_files = [cur_ref + ".amb", cur_ref + ".ann", cur_ref + ".bwt", cur_ref + ".pac", cur_ref + ".sa"];
+            if globs['mapper'] == "bwa":
+                cur_logfile = os.path.join(globs['iterlogdir'], "bwa-index-iter-" + globs['iter-str'] + ".log");
+                index_files = [cur_ref + ".amb", cur_ref + ".ann", cur_ref + ".bwt", cur_ref + ".pac", cur_ref + ".sa"];
 
-            index_cmd = globs['bwa-path'] + " index " + cur_ref;
-            cmds[index_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create BWA reference index", 'outfile' : "", 'logfile' : cur_logfile, 'start' : False };
-            index_cmds[index_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create BWA reference index", 'outfile' : "", 'logfile' : cur_logfile, 'start' : False };
+                index_cmd = globs['map-path'] + " index " + cur_ref;
+                cmds[index_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create BWA reference index", 'outfile' : "", 'logfile' : cur_logfile, 'start' : False };
+                index_cmds[index_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create BWA reference index", 'outfile' : "", 'logfile' : cur_logfile, 'start' : False };
+            # Create the reference index by running bwa index if --mapper is bwa
+
+            elif globs['mapper'] == "hisat2":
+                cur_logfile = os.path.join(globs['iterlogdir'], "hisat2-build-index-iter-" + globs['iter-str'] + ".log");
+                index_file = cur_ref + ".ht";
+
+                index_cmd = globs['mapper-path'] + "-build " + cur_ref + " " + cur_ref;
+                cmds[index_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create hisat2 reference index", 'outfile' : "", 'logfile' : cur_logfile, 'start' : False };
+                index_cmds[index_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create hisat2 reference index", 'outfile' : "", 'logfile' : cur_logfile, 'start' : False };                
+            # Create the reference index by running hisat2-build if --mapper is hisat2
 
     index_procs = min(3, globs['num-procs']);
     pool = mp.Pool(processes=index_procs);
@@ -100,6 +136,7 @@ def indexFa(globs, cmds, cur_ref):
             globs['exit-code'] = 1;
             PC.endProg(globs);
     pool.terminate();
+    # Run the index commands in parallel and check for errors.
 
     return cmds;
 

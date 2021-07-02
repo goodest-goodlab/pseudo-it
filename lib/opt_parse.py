@@ -19,7 +19,9 @@ def optParse(globs):
 	parser.add_argument("-o", dest="out_dest", help="Desired output directory. This will be created for you if it doesn't exist. Default: pseudoit-[date]-[time]", default=False);
 	# Output
 	parser.add_argument("-resume", dest="resume", help="The path to a previous Pseudo-it directory to resume a run. Scans for presence of files and resumes when it can't find an expected file.", default=False);
-	parser.add_argument("-bwa", dest="bwa_path", help="The path to the BWA mapping progam. Default: bwa", default=False);
+	parser.add_argument("-mapper", dest="mapper", help="The name of the mapping progam. One of: bwa, hisat2. Default: bwa", default=False);
+	parser.add_argument("-mapperpath", dest="mapper_path", help="The path to the mapping program. By default, just the name of the program.", default=False);
+	#parser.add_argument("-bwa", dest="bwa_path", help="The path to the BWA mapping progam. Default: bwa", default=False);
 	parser.add_argument("-picard", dest="picard_path", help="The exact command used to run picard. For a jar file: java -jar <full path to jar file>. For an alias or conda install: picard. Include heap size in command, i.e. -Xmx6g. Default: picard", default=False);
 	parser.add_argument("-samtools", dest="samtools_path", help="The path to the samtools progam. Default: samtools", default=False);
 	parser.add_argument("-gatk", dest="gatk_path", help="The path to the GATK progam. Default: gatk", default=False);
@@ -27,7 +29,7 @@ def optParse(globs):
 	parser.add_argument("-bcftools", dest="bcftools_path", help="The path to the bcftools progam. Default: bcftools", default=False);
 	# Dependency paths
 	parser.add_argument("-i", dest="num_iters", help="The number of iterations Pseudo-it will run. Default: 4.", type=int, default=4);
-	parser.add_argument("-bwa-t", dest="bwa_threads", help="The number of threads for BWA mem to use for each library. If you specify -bwa-t 3 and have 3 libraries (and have at least -p 3), this means a total of 9 processes will be used during mapping. If left unspecified and -p is specified this will be determined automatically by dividing -p by the number of libraries you provide. Otherwise, default: 1.", default=False);
+	parser.add_argument("-map-t", dest="map_threads", help="The number of threads for the mapper to use for each read type. If you specify -map-t 3 and have 3 read types (and have at least -p 3), this means a total of 9 processes will be used during mapping. If left unspecified and -p is specified this will be determined automatically by dividing -p by the number of libraries you provide. Otherwise, default: 1.", default=False);
 	parser.add_argument("-gatk-t", dest="gatk_threads", help="The number of threads for GATK's Haplotype caller to use. If you specify -p 4 and -gatk-t 4, this means that a total of 16 processes will be used. GATK default: 4.", default=False);
 	parser.add_argument("-vcf", dest="vcf", help="A VCF with variants to IGNORE in the called data.", default=False);
 	parser.add_argument("-f", dest="filter", help="The expression to filter variants. Must conform to VCF INFO field standards. Default read depth filters are optimized for a 30-40X sequencing run -- adjust for your assembly. Default: \"MQ < 30.0 || DP < 5 || DP > 60\"", default=False);
@@ -70,6 +72,7 @@ def optParse(globs):
 	if args.dryrun:
 		globs['dryrun'] = True;
 	globs['overwrite'] = args.ow_flag;
+	# Check run mode options.
 
 	if args.num_iters > 1 or not args.bam:
 		if not any([args.se, args.pe1, args.pe2, args.pem]):
@@ -80,6 +83,7 @@ def optParse(globs):
 
 	if not args.ref:
 		PC.errorOut("OP3", "A reference FASTA file must be provided with -ref.", globs);
+	# Check that all input file options are provided.
 
 	if args.bam:
 		globs['bam'] = args.bam;
@@ -88,6 +92,7 @@ def optParse(globs):
 
 	globs['se'], globs['pe1'], globs['pe2'], globs['pem'], globs['ref'] = args.se, args.pe1, args.pe2, args.pem, args.ref;
 	globs['num-libs'] = len( [ l for l in [globs['se'], globs['pe1'], globs['pem']] if l ] );
+	# Parse the fastq files.
 
 	globs = PC.fileCheck(globs);
 	# Input file checking.
@@ -192,13 +197,13 @@ def optParse(globs):
 	# Checking the number of processors option.
 
 	if not args.bam:
-		if args.bwa_threads:
-			globs['bwa-t'] = PC.isPosInt(args.bwa_threads);
-			if not globs['bwa-t']:
-				PC.errorOut("OP11", "-bwa-t must be an integer value greater than 1.", globs);
+		if args.map_threads:
+			globs['map-t'] = PC.isPosInt(args.map_threads);
+			if not globs['map-t']:
+				PC.errorOut("OP11", "-map-t must be an integer value greater than 1.", globs);
 		elif globs['num-procs'] != 1:
-			globs['bwa-t'] = math.floor(globs['num-procs'] / globs['num-libs']);
-	# Getting the number of BWA mem threads.
+			globs['map-t'] = math.floor(globs['num-procs'] / globs['num-libs']);
+	# Getting the number of mapping threads.
 
 	if args.gatk_threads:
 		globs['gatk-t'] = PC.isPosInt(args.gatk_threads);
@@ -216,16 +221,16 @@ def optParse(globs):
 		globs['filter-procs'] = globs['num-procs']
 	# Check if the number of proces requested is over the max allowed for GenotypeGVCFs and bcftools filter.
 
-	if globs['num-procs'] < globs['gatk-t'] or globs['num-procs'] < globs['bwa-t']:
+	if globs['num-procs'] < globs['gatk-t'] or globs['num-procs'] < globs['map-t']:
 		PC.errorOut("OP13", "-p must be greater than both -bwa-t and -gatk-t, else we can't spawn a single process efficiently.", globs);
 	# Check that the procs requested between programs are compatible
 
-	procs_needed = globs['num-libs'] * globs['bwa-t'];
+	procs_needed = globs['num-libs'] * globs['map-t'];
 	if procs_needed > globs['num-procs']:
-		globs['map-procs'] = math.floor(globs['num-procs'] / globs['bwa-t']);
+		globs['map-procs'] = math.floor(globs['num-procs'] / globs['map-t']);
 	else:
 		globs['map-procs'] = globs['num-libs'];
-    # Determine number of BWA processes to launch
+    # Determine number of mapping processes to launch
 
 	globs['gatk-procs'] = math.floor(globs['num-procs'] / globs['gatk-t']);
     # Determine number of GATK HaplotypeCaller processes to launch
@@ -287,7 +292,7 @@ def startProg(globs):
 	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# Program", pad) + "Specified Path");
 	# PC.printWrite(globs['logfilename'], globs['log-v'], "# " + "-" * 125);
 	
-	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -bwa", pad) + globs['bwa-path']);
+	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -mapper", pad) + globs['mapper-path']);
 	# Reporting BWA path.
 
 	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -picard", pad) + globs['picard-path']);
@@ -403,15 +408,15 @@ def startProg(globs):
 				"Pseudo-it will use this many processes to run.");
 	# Reporting the processes option.
 
-	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -bwa-t", pad) + 
-				PC.spacedOut(str(globs['bwa-t']), opt_pad) + 
-				"BWA mem will use this many threads for mapping.");
-	# Reporting the BWA mem threads option.
+	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -map-t", pad) + 
+				PC.spacedOut(str(globs['map-t']), opt_pad) + 
+				"pseudo-it will use this many threads for mapping.");
+	# Reporting the mapping threads option.
 
-	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# BWA parallel libraries", pad) + 
+	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# Mapping parallel runs", pad) + 
 				PC.spacedOut(str(globs['map-procs']), opt_pad) + 
-				"This many libraries will be mapped in parallel, each using " + str(globs['bwa-t']) + " threads.");
-	# Reporting the determined number of processes to spawn for BWA
+				"This many libraries will be mapped in parallel, each using " + str(globs['map-t']) + " threads.");
+	# Reporting the determined number of processes to spawn for mapping.
 
 	if not globs['map-only']:
 		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -gatk-t", pad) + 
@@ -431,7 +436,7 @@ def startProg(globs):
 
 		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -f", pad) + 
 					PC.spacedOut(str(globs['filter']), opt_pad) + 
-					"Variants will be filtered based on these criteria during the Variant Filtration step.");
+					"\tVariants will be filtered based on these criteria during the Variant Filtration step.");
 		# Reporting the filter option.
 
 	if not globs['quiet']:
