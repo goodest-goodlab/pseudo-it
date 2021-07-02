@@ -53,7 +53,8 @@ def init():
         'filter-sites' : False,
         # I/O options
         
-        'bwa-path' : 'bwa',
+        'mapper' : 'bwa',
+        'mapper-path' : 'bwa',
         'picard-path' : 'picard',
         'samtools-path' : 'samtools',
         'gatk-path' : 'gatk',
@@ -62,14 +63,21 @@ def init():
         'tabix-path' : 'tabix',
         # Dependency paths
 
-        'bwa-t' : 1,
-        # Number of threads for BWA mem to use.
+        'mapper-t' : 1,
+        # Number of threads for the mapper to use.
 
         'gatk-t' : 4,
         'gvcf-procs' : 1,
         'filter-procs' : 1,
         # Number of threads for GATK's --native-pair-hmm-threads option and the number of procs
         # to use for GenotypeGVCFs and bcftools filter.
+
+        'rg' : { 'ID' : '',
+                 'PL' : '',
+                 'PU' : '',
+                 'LB' : '',
+                 'SM' : ''},
+        # Read groups.
 
         'filter' : "'MQ < 30.0 || FORMAT/DP < 5 || FORMAT/DP > 60'",
         # Variant filtration string default

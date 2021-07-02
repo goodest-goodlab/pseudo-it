@@ -141,12 +141,21 @@ def mapping(globs):
             if not globs['dryrun']:
                 globs['filter-sites'] = PC.readVCF(globs['in-vcf']);
         # If a VCF file has been provided to filter SNPs with -vcf, read those SNPs here. This is slow, meant for a small number of SNPs
-        # only.
+        # in small genomes only.
     # INDEX FASTA IF NOT FIRST ITERATION
 
     if do_mapping:
         PC.report_step(globs, cmds, "NA--01   Read mapping", statstr, "Mapping reads and post-processing.");
-        bamfiles, cmds = pimap.BWA(globs, cmds, cur_ref);
+
+        PC.report_step(globs, cmds, "NA--01   Read mapping", statstr, "Getting read groups.");
+        pimap.getRG(globs);
+
+        if globs['mapper'] == "bwa":
+            bamfiles, cmds = pimap.BWA(globs, cmds, cur_ref);
+        # If --mapper is bwa
+        if globs['mapper'] == "hisat2":
+            bamfiles, cmds = pimap.hisat2(globs, cmds, cur_ref);
+        # If --mapper is hisat2
         # READ MAPPING
 
         #rg_bamfile, cmds = varprep.addRG(globs, cmds, bamfiles);

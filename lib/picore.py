@@ -44,8 +44,15 @@ def execCheck(globs, a):
 	deps_passed = True;
 	# Variable to check if all dependencies are found.
 
-	if a.bwa_path:
-		globs['bwa-path'] = a.bwa_path;
+	if a.mapper and a.mapper not in ["bwa", "hisat2"]:
+		errorOut("CORE1", "Unknown mapping program specified with -mapper: " + a.mapper, globs);
+	elif a.mapper:
+		globs['mapper'] = a.mapper;
+
+	if a.mapper_path:
+		globs['mapper-path'] = a.mapper_path;
+	else:
+		globs['mapper-path'] = globs['mapper'];
 	if a.picard_path:
 		globs['picard-path'] = a.picard_path;
 	if a.samtools_path:
@@ -65,9 +72,12 @@ def execCheck(globs, a):
 		print("   -------------------------------");
 	# For the dependency check option (--depcheck), this initializes a neat output table.
 
-	for opt in ['bwa-path', 'picard-path', 'samtools-path', 'gatk-path', 'bedtools-path', 'bcftools-path', 'tabix-path']:
+	for opt in ['mapper-path', 'picard-path', 'samtools-path', 'gatk-path', 'bedtools-path', 'bcftools-path', 'tabix-path']:
 		
 		prog = opt[:opt.index('-')];
+		if prog == "mapper":
+			prog = globs['mapper'];
+
 		if prog in ['bwa','gatk']:
 			prog = prog.upper();
 		elif prog == 'picard':
