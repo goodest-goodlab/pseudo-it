@@ -82,6 +82,10 @@ def init():
         'filter' : "'MQ < 30.0 || FORMAT/DP < 5 || FORMAT/DP > 60'",
         # Variant filtration string default
 
+        'in-bed' : False,
+        'regions' : False,
+        # A file name for a bed file containing intervals. Variants will only be called in these intervals.
+
         'num-procs' : 1,
         'num-iters' : 4,
         'quiet' : False,
