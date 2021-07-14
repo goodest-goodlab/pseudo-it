@@ -48,7 +48,7 @@ def init():
         'final' : False,
         'keeplevel' : 1,
         'mkdups' : True,
-        'softmask' : True,
+        'mask' : 'soft',
         'in-vcf' : False,
         'filter-sites' : False,
         # I/O options
@@ -84,7 +84,15 @@ def init():
 
         'in-bed' : False,
         'regions' : False,
-        # A file name for a bed file containing intervals. Variants will only be called in these intervals.
+        'bed-mode' : False,
+        # Variables if a bed file containing intervals is provided. Variants will only be called in these intervals.
+        # bed-mode can be one of 'regions' or 'file'.
+
+        'intervals' : False,
+        # The intervales over which to parallelize (or not) variant calling. 
+        # By default, the scaffolds/chromosomes in the reference genome. 
+        # If a bed file is specified with -bedmode regions, then those regions in the bed file. This is slow for many small regions but better for large regions.
+        # If a bed file is specifed with -bedmode file, then a single gatk instance will spawn for the whole file with all specified processes. Better for many small regions.
 
         'num-procs' : 1,
         'num-iters' : 4,
@@ -95,6 +103,7 @@ def init():
         'dryrun' : False,
         'continue' : False,
         'iteration' : 1,
+        'last-iter' : False,
         'map-only' : False,
         'pad' : 82,
         'endprog' : False,

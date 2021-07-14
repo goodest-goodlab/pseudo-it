@@ -21,21 +21,30 @@ def varFilter(globs, cmds, cur_ref):
 # Run the command to filter variants from a VCF file based on input filters. Default: "MQ < 30.0 || DP < 5 || DP > 60"
     
     bcftools_cmds = {};
-    for scaff in globs['scaffolds']:
+    # A dictionary containing the bcftools commands to be generated.
+
+    for region in globs['intervals']:
         # if not globs['last-iter'] or (globs['last-iter'] and not globs['indels']):
         #     cur_logfile = os.path.join(globs['itervcflogdir'], "bcftools-filter-" + scaff + "-iter-" + globs['iter-str'] + "-snps.log");
         #     vcf_file = os.path.join(globs['itervcfscaffdir'], scaff + "-iter-" + globs['iter-str'] + "-snps.vcf.gz");
         #     filter_file = os.path.join(globs['itervcfscaffdir'], scaff + "-iter-" + globs['iter-str'] + "-snps-filter.vcf.gz");
         # else:
-        cur_logfile = os.path.join(globs['itervcflogdir'], "bcftools-filter-" + scaff + "-iter-" + globs['iter-str'] + ".log");
-        vcf_file = os.path.join(globs['itervcfscaffdir'], scaff + "-iter-" + globs['iter-str'] + ".vcf.gz");
-        filter_file = os.path.join(globs['itervcfscaffdir'], scaff + "-iter-" + globs['iter-str'] + "-filter.vcf.gz");
+
+        if globs['bed-mode'] == "file":
+            region_str = "";
+        else:
+            region_str = region + "-";
+        # For file names, if the region needs to be appended add a hyphen.
+
+        cur_logfile = os.path.join(globs['itervcflogdir'], "bcftools-filter-" + region_str + "iter-" + globs['iter-str'] + ".log");
+        vcf_file = os.path.join(globs['itervcfscaffdir'], region_str + "iter-" + globs['iter-str'] + ".vcf.gz");
+        filter_file = os.path.join(globs['itervcfscaffdir'], region_str + "iter-" + globs['iter-str'] + "-filter.vcf.gz");
 
         bcftools_cmd = globs['bcftools-path'] + " filter -m+ -e " + globs['filter'] + " -s pseudoit --IndelGap 5 -Oz -o " + filter_file + " " + vcf_file;
 
         cmd_num = PC.getCMDNum(globs, len(cmds));
-        cmds[bcftools_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Filter VCF " + scaff, 'outfile' : filter_file,  'logfile' : cur_logfile, 'start' : False, "vcffile" : vcf_file };
-        bcftools_cmds[bcftools_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Filter VCF " + scaff, 'outfile' : filter_file,  'logfile' : cur_logfile, 'start' : False, "vcffile" : vcf_file };
+        cmds[bcftools_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Filter VCF " + region_str.replace("-",""), 'outfile' : filter_file,  'logfile' : cur_logfile, 'start' : False, "vcffile" : vcf_file };
+        bcftools_cmds[bcftools_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Filter VCF " + region_str.replace("-",""), 'outfile' : filter_file,  'logfile' : cur_logfile, 'start' : False, "vcffile" : vcf_file };
 
     if globs['dryrun']:
         cmd_num = PC.getCMDNum(globs, len(cmds));
@@ -63,12 +72,20 @@ def varFilterManual(globs, cmds):
 # iteration vcf. This is very slow and meant only for small genomes/numbers of SNPs. 
 # Specifically implemented for SARS-CoV-2 genomes.
 
-    for scaff in globs['scaffolds']:
+    for region in globs['intervals']:
+        if globs['bed-mode'] == "file":
+            region_str = "";
+        else:
+            region_str = region + "-";
+
         if globs['dryrun']:
             PC.report_step(globs, cmds, "NA Filtering variants from input VCF", "DRYRUN", globs['in-vcf']);
         else:
             PC.report_step(globs, cmds, "NA Filtering variants from input VCF", "EXECUTING", globs['in-vcf']);
-            filter_file = os.path.join(globs['itervcfscaffdir'], scaff + "-iter-" + globs['iter-str'] + "-filter.vcf.gz");
+            if globs['bed-mode'] == "file":
+                filter_file = os.path.join(globs['itervcfscaffdir'], "-iter-" + globs['iter-str'] + "-filter.vcf.gz");
+            else:
+                filter_file = os.path.join(globs['itervcfscaffdir'], region_str + "iter-" + globs['iter-str'] + "-filter.vcf.gz");
             filter_file_unzipped = filter_file.replace(".gz", "");
             os.system("gunzip " + filter_file);
             vcflines = [ line.strip().split("\t") for line in open(filter_file_unzipped) ];
@@ -118,10 +135,14 @@ def gatherVCFs(globs, cmds):
     #         infile_ext = "-filter.vcf.gz";
     infile_ext = "-filter.vcf.gz";
 
+    intervals = 'scaffolds';
+    if globs['bed-mode'] == "regions":
+        intervals = 'regions';
+
     with open(params_file, "w") as paramsfile:
-        for scaff in globs['scaffolds']:
-            scaff_vcf = os.path.join(globs['itervcfscaffdir'], scaff + "-iter-" + globs['iter-str'] + infile_ext);
-            paramsfile.write("-I " + scaff_vcf + "\n");
+        for region in globs[intervals]:
+            region_vcf = os.path.join(globs['itervcfscaffdir'], region + "-iter-" + globs['iter-str'] + infile_ext);
+            paramsfile.write("-I " + region_vcf + "\n");
     gatk_cmd = globs['gatk-path'] + " GatherVcfs --arguments_file " + params_file + " -O " + globs['iter-gather-vcf'];
     cmds[gatk_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Gather VCFs", 'outfile' : globs['iter-gather-vcf'],  'logfile' : globs['iter-gather-vcf-log'], 'start' : False };
 
@@ -133,7 +154,7 @@ def gatherVCFs(globs, cmds):
 #############################################################################
 
 def indexVCF(globs, cmds, vcf_file):
-    
+# Index a vcf file with tabix
     index_file = vcf_file + ".tbi";
     cur_logfile = cur_logfile = os.path.join(globs['iterlogdir'], "tabix-" + globs['iter-str'] + ".log");
 

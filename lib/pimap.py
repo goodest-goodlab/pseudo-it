@@ -3,45 +3,54 @@
 import os, gzip, math, multiprocessing as mp, lib.picore as PC
 #############################################################################
 
-def getRG(globs):
+def getRG(globs, cmds):
 # This function reads the first line of a FASTQ file to get info
 # for the read groups and stores this in the global dictionary to
 # add to BAM files as reads are mapped.
 
-    for lib_type in globs['libs']:
-        if lib_type == "pe":
-            fq_file = globs['libs'][lib_type].split(" ")[0];
-        else:
-            fq_file = globs['libs'][lib_type];
-        # Get the fastq file for the current library.
+    cmd = "getRG()";
+    cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Getting read group information from FASTQ", 'outfile' : "", 'logfile' : "", 'start' : False };
 
-        try:
-            with gzip.open(fq_file) as fo:
-                fl = fo.readline().decode().strip()[1:].split(":");
-        except:
-            with open(fq_file) as fo:
-                fl = fo.readline().strip()[1:].split(":");
-        # Try to read the first line whether the fastq file is compressed or not.        
+    if not globs['dryrun']:
+        PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
+        for lib_type in globs['libs']:
+            if lib_type == "pe":
+                fq_file = globs['libs'][lib_type].split(" ")[0];
+            else:
+                fq_file = globs['libs'][lib_type];
+            # Get the fastq file for the current library.
 
-        if len(fl) < 3:
-            read_group_id = "pi-iter-" + globs['iter-str'];
-        else:
-            read_group_id = ".".join([fl[0], fl[1], fl[2]]);
+            try:
+                with gzip.open(fq_file) as fo:
+                    fl = fo.readline().decode().strip()[1:].split(":");
+            except:
+                with open(fq_file) as fo:
+                    fl = fo.readline().strip()[1:].split(":");
+            # Try to read the first line whether the fastq file is compressed or not.        
 
-        globs['rg']['ID'] = read_group_id;
-        globs['rg']['PL'] = "ILLUMINA";
-        globs['rg']['PU'] = read_group_id;
-        globs['rg']['LB'] = globs['sample-name'] + "-pseudoit-iter-" + globs['iter-str']# + "-" + lib_type;;
-        globs['rg']['SM'] = globs['sample-name'];
-        # Extract read group info from first line.
-        # Assumes all reads in fastq file are from same run.
-        # Assumes Illumina reads.
-        # Sample and Library are determined here.
+            if len(fl) < 3:
+                read_group_id = "pi-iter-" + globs['iter-str'];
+            else:
+                read_group_id = ".".join([fl[0], fl[1], fl[2]]);
 
-        break;
-        # Only need to read the first file since we assume all are from the same library.
+            globs['rg']['ID'] = read_group_id;
+            globs['rg']['PL'] = "ILLUMINA";
+            globs['rg']['PU'] = read_group_id;
+            globs['rg']['LB'] = globs['sample-name'] + "-pseudoit-iter-" + globs['iter-str']# + "-" + lib_type;;
+            globs['rg']['SM'] = globs['sample-name'];
+            # Extract read group info from first line.
+            # Assumes all reads in fastq file are from same run.
+            # Assumes Illumina reads.
+            # Sample and Library are determined here.
 
-    return globs;      
+            break;
+            # Only need to read the first file since we assume all are from the same library.
+
+        PC.report_step(globs, cmds, cmd, "SUCCESS", "Read group info read", "");
+    else:
+        PC.report_step(globs, cmds, cmd, "DRYRUN", cmd);
+
+    return globs, cmds;      
 
 #############################################################################
 
