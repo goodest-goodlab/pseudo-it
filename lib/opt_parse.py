@@ -177,7 +177,10 @@ def optParse(globs):
 		globs['keeplevel'] = 2;
 	elif args.keep_only_final:
 		globs['keeplevel'] = 0;
-	# Intermediate file retention options. Keep level 1: Default (keep only final files per iteration). level 2: Keep ALL intermediate files. level 3: Keep only final files from last iteration.
+	# Intermediate file retention options. 
+	# Keep level 1: Default (keep only final files per iteration). 
+	# level 2: Keep ALL intermediate files. 
+	# level 3: Keep only final files from last iteration.
 
 	if args.noindels:
 		globs['indels'] = False;
@@ -205,7 +208,9 @@ def optParse(globs):
 
 	if args.filter:
 		globs['filter'] = args.filter;
-	globs['filter'] = globs['filter'][:-1] + " || ALT=\"*\"'";
+	if globs['filter'][-1] in ["'", "\""]:
+		globs['filter'] = globs['filter'][:-1];
+	globs['filter'] = globs['filter'] + " || ALT=\"*\"'";
 	if globs['filter'][0] != "'":
 		globs['filter'] = "'" + globs['filter'];
 	# Check the filter option, and add the string to filter out * calls, which represent spanning deletions?
