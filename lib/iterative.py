@@ -98,7 +98,7 @@ def mapping(globs):
         globs['iter-final-vcf-log'] = os.path.join(globs['iterlogdir'], "gatk-selectsnps-iter-" + globs['iter-str'] + "-intermediate.log");
         globs['iter-final-vcf'] = os.path.join(globs['itervcfdir'], "iter-" + globs['iter-str'] + "-filter-intermediate-snps.vcf.gz");
     globs['intermediate-vcf'] = os.path.join(globs['itervcfdir'], "iter-" + globs['iter-str'] + ".vcf.gz");
-    globs['intermediate-vcf-log'] = os.path.join(globs['itervcfdir'], "gatk-haplotypecaller-" + globs['iter-str'] + ".log");
+    globs['intermediate-vcf-log'] = os.path.join(globs['itervcfdir'], "gatk-haplotypcaller-iter-" + globs['iter-str'] + ".log");
     # The expected final vcf file for each iteration. This differs depending on if it is the last iteration, whether a bed
     # file is provided with -bedmode file, and whether --noindels is specified.
 
@@ -254,6 +254,8 @@ def mapping(globs):
         do_hc = PC.prevCheck(globs['intermediate-vcf'], globs['intermediate-vcf-log'], globs);
         if do_hc:
             cmds = varcall.haplotypeCaller(globs, cmds, cur_ref, globs['iter-final-bam']);
+        else:
+            PC.report_step(globs, cmds, "NA--02   HaplotypeCaller", "RESUME", "previous intermediate VCF file found, skipping variant calling: " + globs['intermediate-vcf']);
         # HAPLOTYPECALLER
 
         if globs['last-iter'] and globs['mask'] != "none":
