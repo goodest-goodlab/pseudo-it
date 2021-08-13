@@ -251,11 +251,7 @@ def mapping(globs):
     if do_varcalling:
         PC.report_step(globs, cmds, "NA--02   Variant calling", statstr, "Calling and post-processing variants.");
 
-        do_hc = PC.prevCheck(globs['intermediate-vcf'], globs['intermediate-vcf-log'], globs);
-        if do_hc:
-            cmds = varcall.haplotypeCaller(globs, cmds, cur_ref, globs['iter-final-bam']);
-        else:
-            PC.report_step(globs, cmds, "NA--02   HaplotypeCaller", "RESUME", "previous intermediate VCF file found, skipping variant calling: " + globs['intermediate-vcf']);
+        cmds = varcall.haplotypeCaller(globs, cmds, cur_ref, globs['iter-final-bam']);
         # HAPLOTYPECALLER
 
         if globs['last-iter'] and globs['mask'] != "none":
