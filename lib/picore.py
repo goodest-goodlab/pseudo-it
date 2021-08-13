@@ -30,6 +30,8 @@ def fileCheck(globs):
 	files = ['se', 'pe1', 'pe2', 'pem', 'ref'];
 	if globs['bam']:
 		files += ['bam', 'bam-index'];
+	if globs['in-bed']:
+		files += ['in-bed'];
 	for opt in files:
 		if globs[opt]:
 			if not os.path.isfile(globs[opt]):
@@ -221,17 +223,50 @@ def runCMD(cmd, globs, cmds, report_success):
 
 #############################################################################
 
-def readVCF(vcffile):
+def readBed(bedfile, globs, cmds):
+# Reads a bed file if -bed is specified.
+	cmd = "readBed()";
+	cmds[cmd] = { 'cmd-num' : getCMDNum(globs, len(cmds)), 'desc' : "Reading regions from input bed file", 'outfile' : "", 'logfile' : "", 'start' : False };
+	# Status update for the log
+
+	regions = [];
+	if not globs['dryrun']:
+		report_step(globs, cmds, cmd, "EXECUTING", cmd);
+		bedlines = [ line.strip().split("\t") for line in open(bedfile) if not line.startswith("#") ];
+		for line in bedlines:
+			region = line[0] + ":" + line[1] + "-" + line[2];
+			regions.append(region);
+		report_step(globs, cmds, cmd, "SUCCESS", str(len(regions)) + " regions read", "");
+	else:
+		report_step(globs, cmds, cmd, "DRYRUN", cmd);
+
+	return regions, cmds;
+
+#############################################################################
+
+def readVCF(vcffile, globs, cmds):
+# Reads a vcf file if -vcf is specifed.
 	iupac = {"A":["A"], "T":["T"], "C":["C"], "G":["G"], "R":["A","G"], "Y":["C","T"], "S":["G","C"], "W":["A","T"], "K":["G","T"], "M":["A","C"], 
-				"B":["C","G","T"], "D":["A","G","T"], "H":["A","C","T"], "V":["A","C","G"], "N":["A","T","C","G"], ".":["-"] };
-	vcflines = [ line.strip().split("\t") for line in open(vcffile) if not line.startswith("#") ];
-	for i in range(len(vcflines)):
-		nts = vcflines[i][3].split(",");
-		new_nts = [];
-		for nt in nts:
-			new_nts += iupac[nt];
-		vcflines[i][3] = list(set(new_nts));
-	return vcflines;
+					"B":["C","G","T"], "D":["A","G","T"], "H":["A","C","T"], "V":["A","C","G"], "N":["A","T","C","G"], ".":["-"] };
+
+	cmd = "readVCF()";
+	cmds[cmd] = { 'cmd-num' : getCMDNum(globs, len(cmds)), 'desc' : "Reading SNPs from VCF to exclude from calls", 'outfile' : "", 'logfile' : "", 'start' : False };
+
+	vcflines = [];
+	if not globs['dryrun']:
+		report_step(globs, cmds, cmd, "EXECUTING", cmd);
+		vcflines = [ line.strip().split("\t") for line in open(vcffile) if not line.startswith("#") ];
+		for i in range(len(vcflines)):
+			nts = vcflines[i][3].split(",");
+			new_nts = [];
+			for nt in nts:
+				new_nts += iupac[nt];
+			vcflines[i][3] = list(set(new_nts));
+		report_step(globs, cmds, cmd, "SUCCESS", str(len(vcflines)) + " SNPs read", "");	
+	else:
+		report_step(globs, cmds, cmd, "DRYRUN", cmd);
+
+	return vcflines, cmds;
 
 #############################################################################
 

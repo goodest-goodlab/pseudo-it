@@ -4,7 +4,8 @@ import os, lib.picore as PC, lib.piref as piref
 #############################################################################
 
 def getMask(globs, cmds, vcf_file):
-# Get the sites to be masked into a bed file.
+# Get sites to be masked into a bed file.
+## Maybe I can do this just with bcftools??
 
     mask_bedfile = os.path.join(globs['iterfadir'], "iter-" + globs['iter-str'] + "-masksites.bed");
     if globs['diploid']:
@@ -40,7 +41,9 @@ def getMask(globs, cmds, vcf_file):
 #############################################################################
 
 def maskFa(globs, cmds, mask_bedfile, cur_ref):
-# Fix the headers from the consensus FASTA file.
+# For the final iteration, mask the previous iteration's fasta file to be used as the basis for consensus generation 
+# for the current iteration.
+
     prev_iter = str(int(globs['iter-str']) - 1);
     if len(prev_iter) == 1:
         prev_iter = "0" + prev_iter;
@@ -53,8 +56,9 @@ def maskFa(globs, cmds, mask_bedfile, cur_ref):
         mask_ref = os.path.join(globs['iterfadir'], "iter-" + prev_iter + "-snps-masked.fa");
 
     mask_cmd = globs['bedtools-path'] + " maskfasta -fi " + cur_ref + " -bed " + mask_bedfile;
-    if globs['softmask']:
+    if globs['mask'] == 'soft':
         mask_cmd += " -soft"
+    # Mask mode depends on how -mask was specified.
     mask_cmd += " -fo " + mask_ref;
     cmds[mask_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Softmask reference", 'outfile' : mask_ref, 'logfile' : cur_logfile, 'start' : False };
     

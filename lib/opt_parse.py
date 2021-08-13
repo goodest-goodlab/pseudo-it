@@ -1,7 +1,10 @@
+#############################################################################
 # Parsing and printing the options and meta-info for Pseudo-it.
 # Much of the error checking is done here as well.
 #############################################################################
+
 import sys, os, argparse, math, lib.picore as PC
+
 #############################################################################
 
 def optParse(globs):
@@ -31,12 +34,14 @@ def optParse(globs):
 	parser.add_argument("-i", dest="num_iters", help="The number of iterations Pseudo-it will run. Default: 4.", type=int, default=4);
 	parser.add_argument("-map-t", dest="map_threads", help="The number of threads for the mapper to use for each read type. If you specify -map-t 3 and have 3 read types (and have at least -p 3), this means a total of 9 processes will be used during mapping. If left unspecified and -p is specified this will be determined automatically by dividing -p by the number of libraries you provide. Otherwise, default: 1.", default=False);
 	parser.add_argument("-gatk-t", dest="gatk_threads", help="The number of threads for GATK's Haplotype caller to use. If you specify -p 4 and -gatk-t 4, this means that a total of 16 processes will be used. GATK default: 4.", default=False);
-	parser.add_argument("-vcf", dest="vcf", help="A VCF with variants to IGNORE in the called data.", default=False);
+	parser.add_argument("-bed", dest="bed", help="A bed file. Only intervals in this file will have variants called.", default=False);
+	parser.add_argument("-bedmode", dest="bed_mode", help="When a .bed file is provided, this option specifies how it is used. With 'regions', each entry in the bed file will be run with it's own instance of gatk. With 'file', a single instance of gatk will be run for all regions. This distinction is made because with many regions in a .bed file, the overhead to run them separately with gatk is too great. For many small regions, specify 'file'. Default: file", default="file");
+	parser.add_argument("-vcf", dest="vcf", help="A VCF with variants to IGNORE in the called data. Beta mode -- only use for small genomes.", default=False);
 	parser.add_argument("-f", dest="filter", help="The expression to filter variants. Must conform to VCF INFO field standards. Default read depth filters are optimized for a 30-40X sequencing run -- adjust for your assembly. Default: \"MQ < 30.0 || DP < 5 || DP > 60\"", default=False);
 	parser.add_argument("-p", dest="processes", help="The MAX number of processes Pseudo-it can use. If -p is set to 12 and -gatk-t is set to 4, then Pseudo-it will spawn 3 GATK processes in parallel. Default: 1.", type=int, default=1);
+	parser.add_argument("-mask", dest="mask_opt", help="The type of masking to perform on the final consensus sequence for sites without genotypes called. 'hard' to replace these sites with Ns, 'soft' to replace these sites with lower-case reference nucleotides, and 'none' to leave these sites as reference. Default: soft", default=False);
 	# User params
 	parser.add_argument("--nomkdups", dest="no_mkdups", help="Do not run Picard's MarkDuplicates on mapped reads.", action="store_true", default=False);
-	parser.add_argument("--hardmask", dest="hard_mask", help="By default, low quality positions in the final consensus sequence will be soft-masked as lower-case nucleotides. Set this to hard-mask them as Ns.", action="store_true", default=False);
 	parser.add_argument("--maponly", dest="map_only", help="Only do one iteration and stop after read mapping.", action="store_true", default=False);
 	parser.add_argument("--noindels", dest="noindels", help="Set this to not incorporate indels into the final assembly.", action="store_true", default=False);
 	parser.add_argument("--diploid", dest="diploid", help="Set this use IUPAC ambiguity codes in the final FASTA file.", action="store_true", default=False);
@@ -88,7 +93,15 @@ def optParse(globs):
 	if args.bam:
 		globs['bam'] = args.bam;
 		globs['bam-index'] = args.bam + ".bai";
-	# Options if a pre-mapped BAM file is supplied
+	# Options if a pre-mapped BAM file is supplied.
+
+	if args.bed:
+		args.bed_mode = args.bed_mode.lower();
+		if args.bed_mode not in ['regions', 'file']:
+			PC.errorOut("OP4", "When -bed is specified, -bedmode must be one of 'regions' or 'file'.", globs);
+		globs['bed-mode'] = args.bed_mode;
+		globs['in-bed'] = args.bed;
+	# Check if a bed file is provided for variant calling by region.
 
 	globs['se'], globs['pe1'], globs['pe2'], globs['pem'], globs['ref'] = args.se, args.pe1, args.pe2, args.pem, args.ref;
 	globs['num-libs'] = len( [ l for l in [globs['se'], globs['pe1'], globs['pem']] if l ] );
@@ -99,13 +112,20 @@ def optParse(globs):
 
 	if args.no_mkdups:
 		globs['mkdups'] = False;
-	if args.hard_mask:
-		globs['softmask'] = False;
+	# Check the --nomkdups option.
+
+	if args.mask_opt:
+		args.mask_opt = args.mask_opt.lower();
+		if args.mask_opt not in ['none', 'soft', 'hard']:
+			PC.errorOut("OP4", "-mask must be one of 'regions', 'file', or 'none'.", globs);
+		globs['mask'] = args.mask_opt;
+	# Check the type of masking specified with -mask.
+
 	if args.vcf:
 		if not os.path.isfile(args.vcf):
-			PC.errorOut("OP4", "Cannot find file specified with -vcf: " + args.vcf, globs);
+			PC.errorOut("OP5", "Cannot find file specified with -vcf: " + args.vcf, globs);
 		globs['in-vcf'] = args.vcf;
-	# Options for marking duplicates, hard vs. soft masking, and a vcf file to filter SNPs with.
+	# Check if a vcf file was provided to filter SNPs with.
 
 	for l in ['se', 'pe', 'pem']:
 		if l != 'pe':
@@ -113,13 +133,13 @@ def optParse(globs):
 				globs['libs'][l] = globs[l];
 		elif globs[l+"1"]:
 			globs['libs'][l] = globs[l+"1"] + " " + globs[l+"2"];
-	# Restructure the FASTQ libraries into a single dictionary.
+	# Restructure the FASTQ files into a single dictionary.
 
 	if args.resume:
 		if globs['overwrite']:
-			PC.errorOut("OP5", "--overwrite cannot be specified with --resume.", globs);
+			PC.errorOut("OP6", "--overwrite cannot be specified with --resume.", globs);
 		if not os.path.isdir(args.resume):
-			PC.errorOut("OP6", "Directory specified by --resume does not exist!", globs);
+			PC.errorOut("OP7", "Directory specified by --resume does not exist!", globs);
 		globs['resume'] = True;
 		globs['outdir'] = args.resume;
 	# Check for resume flag.
@@ -131,7 +151,7 @@ def optParse(globs):
 			globs['outdir'] = args.out_dest;
 
 		if not globs['overwrite'] and os.path.exists(globs['outdir']):
-			PC.errorOut("OP7", "Output directory already exists: " + globs['outdir'] + ". Specify new directory name, set --overwrite to overwrite, or set -resume to resume.", globs);
+			PC.errorOut("OP8", "Output directory already exists: " + globs['outdir'] + ". Specify new directory name, set --overwrite to overwrite, or set -resume to resume.", globs);
 
 		if not os.path.isdir(globs['outdir']) and not globs['norun']:
 			os.makedirs(globs['outdir']);
@@ -155,12 +175,15 @@ def optParse(globs):
 	# Output prep.
 
 	if args.keep_all and args.keep_only_final:
-		PC.errorOut("OP8", "Only one of --keepall and --keeponlyfinal can be set.", globs);
+		PC.errorOut("OP9", "Only one of --keepall and --keeponlyfinal can be set.", globs);
 	elif args.keep_all:
 		globs['keeplevel'] = 2;
 	elif args.keep_only_final:
 		globs['keeplevel'] = 0;
-	# Intermediate file retention options. Keep level 1: Default (keep only final files per iteration). level 2: Keep ALL intermediate files. level 3: Keep only final files from last iteration.
+	# Intermediate file retention options. 
+	# Keep level 1: Default (keep only final files per iteration). 
+	# level 2: Keep ALL intermediate files. 
+	# level 3: Keep only final files from last iteration.
 
 	if args.noindels:
 		globs['indels'] = False;
@@ -178,7 +201,7 @@ def optParse(globs):
 
 	globs['num-iters'] = PC.isPosInt(args.num_iters);
 	if globs['num-iters'] < 1:
-		PC.errorOut("OP9", "-i must be an integer value greater than 1.", globs);
+		PC.errorOut("OP10", "-i must be an integer value greater than 1.", globs);
 	# Checking the number of iterations option.
 
 	if args.map_only:
@@ -188,19 +211,23 @@ def optParse(globs):
 
 	if args.filter:
 		globs['filter'] = args.filter;
-	globs['filter'] = globs['filter'][:-1] + " || ALT=\"*\"'";
-	# Check the filter option.
+	if globs['filter'][-1] in ["'", "\""]:
+		globs['filter'] = globs['filter'][:-1];
+	globs['filter'] = globs['filter'] + " || ALT=\"*\"'";
+	if globs['filter'][0] != "'":
+		globs['filter'] = "'" + globs['filter'];
+	# Check the filter option, and add the string to filter out * calls, which represent spanning deletions?
 
 	globs['num-procs'] = PC.isPosInt(args.processes);
 	if not globs['num-procs']:
-		PC.errorOut("OP10", "-p must be an integer value greater than 1.", globs);
+		PC.errorOut("OP11", "-p must be an integer value greater than 1.", globs);
 	# Checking the number of processors option.
 
 	if not args.bam:
 		if args.map_threads:
 			globs['map-t'] = PC.isPosInt(args.map_threads);
 			if not globs['map-t']:
-				PC.errorOut("OP11", "-map-t must be an integer value greater than 1.", globs);
+				PC.errorOut("OP12", "-map-t must be an integer value greater than 1.", globs);
 		elif globs['num-procs'] != 1:
 			globs['map-t'] = math.floor(globs['num-procs'] / globs['num-libs']);
 	# Getting the number of mapping threads.
@@ -208,7 +235,12 @@ def optParse(globs):
 	if args.gatk_threads:
 		globs['gatk-t'] = PC.isPosInt(args.gatk_threads);
 		if not globs['gatk-t']:		
-			PC.errorOut("OP12", "-gatk-t must be an integer value greater than 1.", globs);
+			PC.errorOut("OP13", "-gatk-t must be an integer value greater than 1.", globs);
+	
+	if globs['in-bed'] and globs['bed-mode'] == "file":
+		globs['gatk-t'] = globs['num-procs'];
+	# If we're only using a single instance of GATK on the provided .bed file, use all specified procs for it
+	
 	if globs['map-only']:
 		globs['gatk-t'] = 1;
 	# Getting the number of GATK HaplotypeCaller threads
@@ -222,7 +254,7 @@ def optParse(globs):
 	# Check if the number of proces requested is over the max allowed for GenotypeGVCFs and bcftools filter.
 
 	if globs['num-procs'] < globs['gatk-t'] or globs['num-procs'] < globs['map-t']:
-		PC.errorOut("OP13", "-p must be greater than both -bwa-t and -gatk-t, else we can't spawn a single process efficiently.", globs);
+		PC.errorOut("OP14", "-p must be greater than both -bwa-t and -gatk-t, else we can't spawn a single process efficiently.", globs);
 	# Check that the procs requested between programs are compatible
 
 	procs_needed = globs['num-libs'] * globs['map-t'];
@@ -382,15 +414,29 @@ def startProg(globs):
 						"Final assembly will NOT use IUPAC ambiguity codes for variant sites.");		
 		# Reporting --diploid option.
 
-		if globs['softmask']:
-			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --hardmask", pad) + 
-						PC.spacedOut("False", opt_pad) + 
-						"Filtered sites in final consensus will be soft-masked (atcg).");
-		else:
-			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --hardmask", pad) + 
-						PC.spacedOut("True", opt_pad) + 
-						"Filtered sites in final consensus will be hard-masked (Ns).");		
-		# Reporting --diploid option.
+		mask_str = PC.spacedOut("# -mask", pad) + PC.spacedOut(globs['mask'], opt_pad);
+		if globs['mask'] == "none":
+			mask_str += "No masking will be done in the final consensus.";
+		elif globs['mask'] == "soft":
+			mask_str += "Low information in final consensus will be soft-masked (atcg).";
+		elif globs['mask'] == "hard":
+			mask_str += "Low information in final consensus will be hard-masked (Ns).";
+		PC.printWrite(globs['logfilename'], globs['log-v'], mask_str);
+		# Reporting --mask option.
+
+		if globs['in-bed']:
+			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -bed", pad) + 
+						PC.spacedOut(globs['in-bed'], opt_pad) + 
+						"Only calling variants in the regions defined in this file.");
+			if globs['bed-mode'] == "file":
+				PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -bedmode", pad) + 
+				PC.spacedOut(globs['bed-mode'], opt_pad) + 
+				"Using only a single instance of GATK to call variants within provided bed regions.");
+			elif globs['bed-mode'] == "regions":
+				PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -bedmode", pad) + 
+				PC.spacedOut(globs['bed-mode'], opt_pad) + 
+				"Using separate instances of GATK to call variants within provided bed regions.");				
+		# Reporting the -r option
 
 		if globs['in-vcf']:
 			PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -vcf", pad) + 

@@ -11,40 +11,40 @@ def indexCheck(cur_fa, globs, cmds):
 
     dictfile = cur_fa.replace(ref_ext, ".dict");
     cmd = "os.path.isfile(" + dictfile + ")";
-    cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Checking ref indices", 'outfile' : "", 'logfile' : "", 'start' : False };
+    cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Checking ref indices (.dict)", 'outfile' : "", 'logfile' : "", 'start' : False };
     PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
     if not os.path.isfile(dictfile):
         PC.errorOut("REF1", "Reference dictionary not found. Please run: picard CreateSequenceDictionary R=<ref>.fa O=<ref>.dict", globs);
-    PC.report_step(globs, cmds, cmd, "SUCCESS", "index file found", "");
+    PC.report_step(globs, cmds, cmd, "SUCCESS", "index file found (.dict)", "");
     # Check for the reference dictionary file.
 
     faidxfile = cur_fa + ".fai";
     cmd = "os.path.isfile(" + faidxfile + ")";
-    cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Checking ref indices", 'outfile' : "", 'logfile' : "", 'start' : False };
+    cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Checking ref indices (.fai)", 'outfile' : "", 'logfile' : "", 'start' : False };
     PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
     if not os.path.isfile(faidxfile):
         PC.errorOut("REF2", "Reference index (samtools) not found. Please run: samtools faidx <ref>.fa", globs);
-    PC.report_step(globs, cmds, cmd, "SUCCESS", "index file found");
+    PC.report_step(globs, cmds, cmd, "SUCCESS", "index file found (.fai)");
     # Check for the reference faidx file.
 
     if globs['mapper'] == "bwa":    
         indexfiles = [cur_fa + ".amb", cur_fa + ".ann", cur_fa + ".bwt", cur_fa + ".pac", cur_fa + ".sa"];
         cmd = "os.path.isfile(" + ",".join(indexfiles) + ")";
-        cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Checking ref indices", 'outfile' : "", 'logfile' : "", 'start' : False };
+        cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Checking ref indices (" + globs['mapper'] + ")", 'outfile' : "", 'logfile' : "", 'start' : False };
         PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
         if any(not os.path.isfile(f) for f in indexfiles):
             PC.errorOut("REF3", "Reference index (bwa) not found. Please run: bwa index <ref>.fa", globs);
-        PC.report_step(globs, cmds, cmd, "SUCCESS", "index files found");
+        PC.report_step(globs, cmds, cmd, "SUCCESS", "index files found (" + globs['mapper'] + ")");
     # Check for the bwa index files if --mapper is bwa.
 
     elif globs['mapper'] == "hisat2":
         indexfile = cur_fa + ".1.ht2";
         cmd = "os.path.isfile(" + indexfile + ")";
-        cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Checking ref indices", 'outfile' : "", 'logfile' : "", 'start' : False };
+        cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Checking ref indices (" + globs['mapper'] + ")", 'outfile' : "", 'logfile' : "", 'start' : False };
         PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
         if not os.path.isfile(indexfile):
             PC.errorOut("REF3", "Reference index (hisat2) not found. Please run: hisat2-build <ref>.fa <ref>.fa", globs);
-        PC.report_step(globs, cmds, cmd, "SUCCESS", "index file found");
+        PC.report_step(globs, cmds, cmd, "SUCCESS", "index file found (" + globs['mapper'] + ")");
     # Check for the hisat2 index files if --mapper is hisat2.        
 
     return cmds;
@@ -54,25 +54,40 @@ def indexCheck(cur_fa, globs, cmds):
 def getScaffs(cur_fa, globs, cmds, report_status=True):
 # Save the list of scaffolds/contigs/chromosomes from a FASTA file to a text file.
 
-    cmd = "grep \">\" " + cur_fa + " | sed 's/>//g'"# > " + globs['scaffs'];
-    # grep the number of scaffolds in the reference... I guess this could also be done by just reading
-    # the number of lines in the index file...
-
-    cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Get ref scaffold IDs", 'outfile' : "", 'logfile' : "", 'start' : False };
-    # Add the grep command to the global commands dict.
+    cmd = "getScaffs()";
+    cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Get ref scaffold IDs from .fai index", 'outfile' : "", 'logfile' : "", 'start' : False };
+    # Add the command to the global commands dict.
 
     if not globs['dryrun']:
         PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
-        cmd_result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE);
-        cur_scaffs = list(filter(None, cmd_result.stdout.decode().split("\n")));
-        globs['scaffolds'] = [ scaff[:scaff.index(" ")] if " " in scaff else scaff for scaff in cur_scaffs ];
-        PC.report_step(globs, cmds, cmd, "SUCCESS", str(len(globs['scaffolds'])) + " scaffold IDs read");
+        indexfile = cur_fa + ".fai";
+        scaffs = [ line.strip().split("\t")[0] for line in open(indexfile) ];
+        PC.report_step(globs, cmds, cmd, "SUCCESS", str(len(scaffs)) + " scaffold IDs read");
     else:
         PC.report_step(globs, cmds, cmd, "DRYRUN", cmd);
-        globs['scaffolds'] = [];
-    # Run the grep command and check for errors..
+        scaffs = [];       
+
+    return scaffs, cmds;
+
+    # cmd = "grep \">\" " + cur_fa + " | sed 's/>//g'"# > " + globs['scaffs'];
+    # # grep the number of scaffolds in the reference... I guess this could also be done by just reading
+    # # the number of lines in the index file...
+
+    # cmds[cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Get ref scaffold IDs", 'outfile' : "", 'logfile' : "", 'start' : False };
+    # # Add the grep command to the global commands dict.
+
+    # if not globs['dryrun']:
+    #     PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
+    #     cmd_result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE);
+    #     cur_scaffs = list(filter(None, cmd_result.stdout.decode().split("\n")));
+    #     globs['scaffolds'] = [ scaff[:scaff.index(" ")] if " " in scaff else scaff for scaff in cur_scaffs ];
+    #     PC.report_step(globs, cmds, cmd, "SUCCESS", str(len(globs['scaffolds'])) + " scaffold IDs read");
+    # else:
+    #     PC.report_step(globs, cmds, cmd, "DRYRUN", cmd);
+    #     globs['scaffolds'] = [];
+    # # Run the grep command and check for errors..
         
-    return cmds;
+    # return cmds;
 
 #############################################################################
 
@@ -114,7 +129,7 @@ def indexFa(globs, cmds, cur_ref):
                 cur_logfile = os.path.join(globs['iterlogdir'], "bwa-index-iter-" + globs['iter-str'] + ".log");
                 index_files = [cur_ref + ".amb", cur_ref + ".ann", cur_ref + ".bwt", cur_ref + ".pac", cur_ref + ".sa"];
 
-                index_cmd = globs['map-path'] + " index " + cur_ref;
+                index_cmd = globs['mapper-path'] + " index " + cur_ref;
                 cmds[index_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create BWA reference index", 'outfile' : "", 'logfile' : cur_logfile, 'start' : False };
                 index_cmds[index_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create BWA reference index", 'outfile' : "", 'logfile' : cur_logfile, 'start' : False };
             # Create the reference index by running bwa index if --mapper is bwa
