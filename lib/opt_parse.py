@@ -1,7 +1,10 @@
+#############################################################################
 # Parsing and printing the options and meta-info for Pseudo-it.
 # Much of the error checking is done here as well.
 #############################################################################
+
 import sys, os, argparse, math, lib.picore as PC
+
 #############################################################################
 
 def optParse(globs):
