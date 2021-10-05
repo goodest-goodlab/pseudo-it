@@ -200,8 +200,8 @@ def mapping(globs):
     if do_mapping:
         PC.report_step(globs, cmds, "NA--01   Read mapping", statstr, "Mapping reads and post-processing.");
 
-        if globs['iteration'] == 1:
-            globs, cmds = pimap.getRG(globs, cmds);
+        #if globs['iteration'] == 1:
+        globs, cmds = pimap.getRG(globs, cmds);
         # Get the read group information if it is the first iteration.
 
         if globs['mapper'] == "bwa":
