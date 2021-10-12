@@ -45,13 +45,14 @@ def haplotypeCaller(globs, cmds, cur_ref, dup_bamfile):
 
     else:
         pool = mp.Pool(processes=globs['gatk-procs']);
-        for exit_flag in pool.starmap(PC.runCMD, ((gatk_cmd, globs, cmds, True) for gatk_cmd in gatk_cmds )):
-            if exit_flag:
-                pool.terminate();
-                globs['exit-code'] = 1;
-                PC.endProg(globs);
-        pool.terminate();    
-
+        #pool_key = 'var-pool-' + str(globs['iteration']);
+        #with pools[pool_key] as pool:
+        for exit_flag in pool.imap_unordered(PC.runCMD, ((gatk_cmd, globs, cmds, True) for gatk_cmd in gatk_cmds )):
+                if exit_flag:
+                    pool.terminate();
+                    globs['exit-code'] = 1;
+                    PC.endProg(globs);
+        pool.terminate();
     return cmds;
 
 #############################################################################
@@ -87,7 +88,7 @@ def genotypeGVCFs(globs, cmds, cur_ref):
         PC.report_step(globs, cmds, gatk_skeleton_cmd, "DRYRUN", gatk_skeleton_cmd);
     else:
         pool = mp.Pool(processes=globs['gvcf-procs']);
-        for exit_flag in pool.starmap(PC.runCMD, ((gatk_cmd, globs, cmds, True) for gatk_cmd in gatk_cmds )):
+        for exit_flag in pool.imap_unordered(PC.runCMD, ((gatk_cmd, globs, cmds, True) for gatk_cmd in gatk_cmds )):
             if exit_flag:
                 pool.terminate();
                 globs['exit-code'] = 1;

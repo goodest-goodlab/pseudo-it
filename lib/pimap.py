@@ -89,7 +89,7 @@ def BWA(globs, cmds, cur_ref):
     # Prepare the BWA commands for each library
 
     pool = mp.Pool(processes=globs['map-procs']);
-    for result in pool.starmap(PC.runCMD, ((bwa_cmd, globs, cmds, True) for bwa_cmd in bwa_cmds )):
+    for result in pool.imap_unordered(PC.runCMD, ((bwa_cmd, globs, cmds, True) for bwa_cmd in bwa_cmds )):
         if result:
             pool.terminate();
             globs['exit-code'] = 1;
@@ -144,7 +144,7 @@ def hisat2(globs, cmds, cur_ref):
     # Prepare the hisat2 commands for each fastq type
 
     pool = mp.Pool(processes=globs['map-procs']);
-    for result in pool.starmap(PC.runCMD, ((hisat2_cmd, globs, cmds, True) for hisat2_cmd in hisat2_cmds )):
+    for result in pool.imap_unordered(PC.runCMD, ((hisat2_cmd, globs, cmds, True) for hisat2_cmd in hisat2_cmds )):
         if result:
             pool.terminate();
             globs['exit-code'] = 1;
@@ -180,7 +180,7 @@ def mergeBam(globs, cmds, bamfiles):
         cmds[merge_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Merge BAM files", 'outfile' : merged_bamfile, 'logfile' : cur_logfile, 'start' : False };
         # Add the MergeSamFiles command to the global cmds dict.
 
-        exit_flag = PC.runCMD(merge_cmd, globs, cmds, True);
+        exit_flag = PC.runCMD((merge_cmd, globs, cmds, True));
         PC.exitCheck(exit_flag, globs);
         # Run the command and check for errors.
 
@@ -223,7 +223,7 @@ def markDups(globs, cmds, rg_bamfile):
     cmds[mkdup_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Mark duplicates", 'outfile' : globs['iter-final-bam'], 'logfile' : globs['iter-final-bam-log'], 'start' : False };
     # Add the MarkDuplicates command to the global cmds dict.
 
-    exit_flag = PC.runCMD(mkdup_cmd, globs, cmds, True);
+    exit_flag = PC.runCMD((mkdup_cmd, globs, cmds, True));
     PC.exitCheck(exit_flag, globs);
     # Run the MarkDuplicates command and check for errors.
 

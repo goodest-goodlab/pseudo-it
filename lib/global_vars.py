@@ -99,6 +99,9 @@ def init():
         'quiet' : False,
         # Other user options
 
+        'var-pool' : False,
+        # Process pools
+
         'norun' : False,
         'dryrun' : False,
         'continue' : False,

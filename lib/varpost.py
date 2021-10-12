@@ -9,7 +9,7 @@ def selectSNPs(globs, cmds, vcf_file):
     gatk_cmd = globs['gatk-path'] + " SelectVariants -V " + vcf_file + " -O " + globs['iter-final-vcf'] + " -select-type SNP -xl-select-type INDEL -xl-select-type MIXED -xl-select-type SYMBOLIC";
     cmd_num = PC.getCMDNum(globs, len(cmds));
     cmds[gatk_cmd] = { 'cmd-num' : cmd_num, 'desc' : "Select SNPs", 'outfile' : vcf_file,  'logfile' : globs['iter-final-vcf-log'], 'start' : False };
-    exit_flag = PC.runCMD(gatk_cmd, globs, cmds, True);
+    exit_flag = PC.runCMD((gatk_cmd, globs, cmds, True));
     PC.exitCheck(exit_flag, globs);
     # End the program if an error is encountered
 
@@ -54,7 +54,7 @@ def varFilter(globs, cmds, cur_ref):
 
     else:
         pool = mp.Pool(processes=globs['filter-procs']);
-        for result in pool.starmap(PC.runCMD, ((bcftools_cmd, globs, cmds, True) for bcftools_cmd in bcftools_cmds )):
+        for result in pool.imap_unordered(PC.runCMD, ((bcftools_cmd, globs, cmds, True) for bcftools_cmd in bcftools_cmds )):
             if result:
                 pool.terminate();
                 globs['exit-code'] = 1;
@@ -146,7 +146,7 @@ def gatherVCFs(globs, cmds):
     gatk_cmd = globs['gatk-path'] + " GatherVcfs --arguments_file " + params_file + " -O " + globs['iter-gather-vcf'];
     cmds[gatk_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Gather VCFs", 'outfile' : globs['iter-gather-vcf'],  'logfile' : globs['iter-gather-vcf-log'], 'start' : False };
 
-    exit_flag = PC.runCMD(gatk_cmd, globs, cmds, True);
+    exit_flag = PC.runCMD((gatk_cmd, globs, cmds, True));
     PC.exitCheck(exit_flag, globs);
     # End the program if an error is encountered
 
@@ -160,7 +160,7 @@ def indexVCF(globs, cmds, vcf_file):
 
     index_cmd = "tabix -fp vcf " + vcf_file;
     cmds[index_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Index VCF", 'outfile' : index_file,  'logfile' : cur_logfile, 'start' : False };
-    exit_flag = PC.runCMD(index_cmd, globs, cmds, True);
+    exit_flag = PC.runCMD((index_cmd, globs, cmds, True));
     PC.exitCheck(exit_flag, globs);
     # End the program if an error is encountered    
 

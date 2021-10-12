@@ -160,8 +160,10 @@ def prevCheck(outfile, logfile, globs):
 
 #############################################################################
 
-def runCMD(cmd, globs, cmds, report_success):
+def runCMD(run_item):
 # Run a command and deal with the output nicely
+	cmd, globs, cmds, report_success = run_item;
+
 	if globs['dryrun']:
 		report_step(globs, cmds, cmd, "DRYRUN", cmd);
 		return False;
@@ -193,7 +195,7 @@ def runCMD(cmd, globs, cmds, report_success):
 				report_step(globs, cmds, cmd, "RE-INDEX ERROR!", "Check log: " + cmds[cmd]['logfile']);
 				return True;
 			else:
-				re_run_status = runCMD(cmd, globs, cmds, report_success);
+				re_run_status = runCMD((cmd, globs, cmds, report_success));
 
 			if re_run_status:
 				return True;

@@ -62,7 +62,7 @@ def maskFa(globs, cmds, mask_bedfile, cur_ref):
     mask_cmd += " -fo " + mask_ref;
     cmds[mask_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Softmask reference", 'outfile' : mask_ref, 'logfile' : cur_logfile, 'start' : False };
     
-    exit_flag = PC.runCMD(mask_cmd, globs, cmds, True);
+    exit_flag = PC.runCMD((mask_cmd, globs, cmds, True));
     PC.exitCheck(exit_flag, globs);
     # End the program if an error is encountered  
 
@@ -114,7 +114,7 @@ def genConsensus(globs, cmds, vcf_file, cur_ref):
             PC.report_step(globs, cmds, cmd, "SUCCESS", "First base converted to upper case");
     # Part of first_lower hack.
 
-    exit_flag = PC.runCMD(bcftools_cmd, globs, cmds, True);    
+    exit_flag = PC.runCMD((bcftools_cmd, globs, cmds, True));
     # Consensus command
     PC.exitCheck(exit_flag, globs);
     # End the program if an error is encountered  
