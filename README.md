@@ -162,7 +162,7 @@ Note that only one of `-se`, `-pe1` and `-pe2`, or `-pem` is required, but any c
 | -pe2 [FASTQ file] | A FASTQ file containing pair 2 of paired-end reads. | 
 | -pem [FASTQ file] | A FASTQ file containing merged paired-end reads. |
 | -bam [BAM file] | OPTIONAL: A BAM file with the reads provided in `-se`, `-pe1` and `-pe2`, and/or `-pem` already mapped to the reference assembly. |
-| -f "[STRING]" | The expression to filter variants. Must conform to VCF INFO field standards. See [bcftools expressions](https://samtools.github.io/bcftools/bcftools.html#expressions) for more info. Default read depth filters are optimized for a 30-40X sequencing run -- adjust for your assembly. Default: `"MQ < 30.0 || DP < 5 || DP > 60"`
+| -f "[STRING]" | The expression to filter variants. Must conform to VCF INFO field standards. See [bcftools expressions](https://samtools.github.io/bcftools/bcftools.html#expressions) for more info. Default read depth filters are optimized for a 30-40X sequencing run -- adjust for your assembly. Default: `"MQ < 30.0 \|\| DP < 5 \|\| DP > 60"`
 | -i [INT] | The number of iterations of pseudo-it to run. Default: 4 |
 | -o [directory name] | The desired output directory. This will be created for you if it doesn't exist. Default: `pseudoit-out-[date]-[time]`. One of `-o` or `-resume` must be provided. |
 | -resume [directory name] | The path to a previous Pseudo-it directory to resume a run. Scans for presence of files and resumes when it can't find an expected file. One of `-o` or `-resume` must be provided. |
