@@ -3,7 +3,11 @@
 # Much of the error checking is done here as well.
 #############################################################################
 
-import sys, os, argparse, math, lib.picore as PC
+import sys
+import os
+import argparse
+import math
+import pseudo_it_lib.picore as PC
 
 #############################################################################
 

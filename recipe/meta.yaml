@@ -1,0 +1,55 @@
+{% set name = "pseudo-it" %}
+{% set version = "1.0.0" %}
+{% set sha256 = "9d0946b061917dfaa74747eb20e8cd242d0450e94d5061db589b94eae5d5364e" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source: 
+  url: https://github.com/goodest-goodlab/pseudo-it/archive/refs/tags/v{{ version }}.tar.gz
+  sha256: {{ sha256 }}
+
+build:
+  number: 0
+
+requirements:
+  host:
+    - python >=3.10
+    - bedtools
+    - bcftools
+    - samtools
+    - gatk
+    - picard
+    - bwa
+  run:
+    - python >=3.10
+    - bedtools
+    - bcftools
+    - samtools
+    - gatk
+    - picard
+    - bwa
+
+test:
+  commands:
+    - pseudo_it.py --version
+    - pseudo_it.py --depcheck
+# Test commands to run after building and installing
+
+about:
+  home: https://github.com/goodest-goodlab/pseudo-it
+  license: GNU GPLv3 
+  license_family: GPL
+  license_file: LICENSE
+  summary: 'Reference-based genome assembly with iterative mapping'
+  description: 'Reference-based genome assembly with iterative mapping'
+  doc_url: https://github.com/goodest-goodlab/pseudo-it
+  dev_url: https://github.com/goodest-goodlab/pseudo-it
+# Package meta info
+# URLs just point to the github page until we update the docs
+
+extra:
+  recipe-maintainers:
+    - gwct
+# Extra info

@@ -1,6 +1,12 @@
 # Mapping modules for Pseudo-it
 #############################################################################
-import os, gzip, math, multiprocessing as mp, lib.picore as PC
+
+import os
+import gzip
+import math
+import multiprocessing as mp
+import pseudo_it_lib.picore as PC
+
 #############################################################################
 
 def getRG(globs, cmds):

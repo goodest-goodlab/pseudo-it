@@ -7,9 +7,16 @@
 # Fall 2019
 #############################################################################
 
-import sys, os, multiprocessing as mp, shutil, lib.picore as PC, \
-	lib.opt_parse as OP, lib.global_vars as GV, lib.pimap as pimap, \
-	lib.piref as piref, lib.iterative as iterative
+import sys
+import os
+import multiprocessing as mp
+import shutil
+import pseudo_it_lib.picore as PC
+import pseudo_it_lib.opt_parse as OP
+import pseudo_it_lib.global_vars as GV
+import pseudo_it_lib.pimap as pimap
+import pseudo_it_lib.piref as piref
+import pseudo_it_lib.iterative as iterative
 
 #############################################################################
 

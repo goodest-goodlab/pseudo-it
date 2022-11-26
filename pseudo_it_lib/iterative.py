@@ -1,8 +1,18 @@
 # Iterative mapping steps for Pseudo-it
 #############################################################################
-import sys, os, shutil, subprocess, lib.picore as PC, lib.piref as piref, \
-    lib.pimap as pimap, multiprocessing as mp, \
-    lib.varcall as varcall, lib.varpost as varpost, lib.consensus as con
+
+import sys
+import os
+import shutil
+import subprocess
+import pseudo_it_lib.picore as PC
+import pseudo_it_lib.piref as piref
+import pseudo_it_lib.pimap as pimap
+import multiprocessing as mp
+import pseudo_it_lib.varcall as varcall
+import pseudo_it_lib.varpost as varpost
+import pseudo_it_lib.consensus as con
+
 #############################################################################
 
 def mapping(globs):

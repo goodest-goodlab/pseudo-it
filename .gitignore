@@ -13,3 +13,5 @@ example-data/example-out*/
 simulations/
 
 regions-test/PSEUDOIT_OUTPUT_BIK/*
+
+samtools.*.tmp.*.bam

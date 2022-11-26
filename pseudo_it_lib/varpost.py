@@ -1,6 +1,11 @@
 # Variant post-processing for Pseudo-it
 #############################################################################
-import os, multiprocessing as mp, lib.picore as PC, lib.piref as piref
+
+import os
+import multiprocessing as mp
+import pseudo_it_lib.picore as PC
+import pseudo_it_lib.piref as piref
+
 #############################################################################
 
 def selectSNPs(globs, cmds, vcf_file):

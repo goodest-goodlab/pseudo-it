@@ -1,6 +1,8 @@
 # Consensus reference generation for Pseudo-it
 #############################################################################
-import os, lib.picore as PC, lib.piref as piref
+import os
+import pseudo_it_lib.picore as PC
+import pseudo_it_lib.piref as piref
 #############################################################################
 
 def getMask(globs, cmds, vcf_file):

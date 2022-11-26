@@ -1,6 +1,11 @@
 # Reference FASTA functions for Pseudo-it
 #############################################################################
-import sys, os, multiprocessing as mp, subprocess, lib.picore as PC
+
+import sys
+import os
+import multiprocessing as mp
+import subprocess
+import pseudo_it_lib.picore as PC
 
 #############################################################################
 

@@ -1,7 +1,12 @@
 
 # Variant calling for Pseudo-it
 #############################################################################
-import os, math, multiprocessing as mp, lib.picore as PC
+
+import os
+import math
+import multiprocessing as mp
+import pseudo_it_lib.picore as PC
+
 #############################################################################
 
 def haplotypeCaller(globs, cmds, cur_ref, dup_bamfile):

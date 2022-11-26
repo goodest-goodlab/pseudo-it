@@ -1,7 +1,9 @@
 # This file holds some global variables for some of the input options.
 # Global variables are exclusively read only -- they are not modified anywhere else in the code except when reading the input options.
 
-import sys, timeit, lib.picore as PC
+import sys
+import timeit
+import pseudo_it_lib.picore as PC
 
 def init():
     globs = {

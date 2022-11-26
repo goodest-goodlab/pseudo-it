@@ -6,7 +6,15 @@
 # Updated for Pseudo-it December 2019
 #############################################################################
 
-import sys, os, timeit, datetime, time, gzip, string, random, subprocess
+import sys
+import os
+import timeit
+import datetime
+import time
+import gzip
+import string
+import random
+import subprocess
 
 #############################################################################
 
