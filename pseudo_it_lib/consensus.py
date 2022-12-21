@@ -27,7 +27,7 @@ def getMask(globs, cmds, vcf_file):
             PC.report_step(globs, cmds, cmd, "EXECUTING", cmd);
             os.system(cmd);
 
-            if os.path.isfile(mask_bedfile) and os.stat(mask_bedfile).st_size != 0:
+            if os.path.isfile(mask_bedfile):# and os.stat(mask_bedfile).st_size != 0:
                 num_sites = str(len(open(mask_bedfile, "r").readlines()));
                 PC.report_step(globs, cmds, cmd, "SUCCESS", num_sites + " mask sites read: " + mask_bedfile);
             else:

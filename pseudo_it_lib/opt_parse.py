@@ -44,6 +44,7 @@ def optParse(globs):
 	parser.add_argument("-f", dest="filter", help="The expression to filter variants. Must conform to VCF INFO field standards. Default read depth filters are optimized for a 30-40X sequencing run -- adjust for your assembly. Default: \"MQ < 30.0 || DP < 5 || DP > 60\"", default=False);
 	parser.add_argument("-p", dest="processes", help="The MAX number of processes Pseudo-it can use. If -p is set to 12 and -gatk-t is set to 4, then Pseudo-it will spawn 3 GATK processes in parallel. Default: 1.", type=int, default=1);
 	parser.add_argument("-mask", dest="mask_opt", help="The type of masking to perform on the final consensus sequence for sites without genotypes called. 'hard' to replace these sites with Ns, 'soft' to replace these sites with lower-case reference nucleotides, and 'none' to leave these sites as reference. Default: soft", default=False);
+	parser.add_argument("-strandness", dest="strandness", help="For use with hisat2 and stranded RNA-seq data. Either 'RF' or 'FR'.", default=False);
 	# User params
 	parser.add_argument("--nomkdups", dest="no_mkdups", help="Do not run Picard's MarkDuplicates on mapped reads.", action="store_true", default=False);
 	parser.add_argument("--maponly", dest="map_only", help="Only do one iteration and stop after read mapping.", action="store_true", default=False);
@@ -130,6 +131,14 @@ def optParse(globs):
 			PC.errorOut("OP5", "Cannot find file specified with -vcf: " + args.vcf, globs);
 		globs['in-vcf'] = args.vcf;
 	# Check if a vcf file was provided to filter SNPs with.
+
+	if args.strandness:
+		if not globs['mapper'] == "hisat2":
+			PC.errorOut("OP6", "-strandness should only be specified when hisat2 is the mapper.", globs);
+		elif args.strandness not in ['RF', 'FR']:
+			PC.errorOut("OP6", "-strandness can only take the value 'RF' or 'FR'", globs);
+		globs['hisat-strandness'] = args.strandness;
+	# Check the strandness option for hisat2
 
 	for l in ['se', 'pe', 'pem']:
 		if l != 'pe':
@@ -329,7 +338,7 @@ def startProg(globs):
 	# PC.printWrite(globs['logfilename'], globs['log-v'], "# " + "-" * 125);
 	
 	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -mapper", pad) + globs['mapper-path']);
-	# Reporting BWA path.
+	# Reporting mapper path.
 
 	PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -picard", pad) + globs['picard-path']);
 	# Reporting Picard path.
@@ -355,6 +364,11 @@ def startProg(globs):
 		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# --maponly", pad) +
 					PC.spacedOut("True", opt_pad) + 
 					"Pseudo-it will do only one iteration and stop after mapping.");
+
+	if globs['hisat-strandness']:
+		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -strandness", pad) +
+					PC.spacedOut(globs['hisat-strandness'], opt_pad) + 
+					"hisat2 will use this for its --rna-strandness option.");
 
 	if globs['bam']:
 		PC.printWrite(globs['logfilename'], globs['log-v'], PC.spacedOut("# -bam", pad) +
