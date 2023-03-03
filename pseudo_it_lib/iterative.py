@@ -77,6 +77,7 @@ def mapping(globs):
         if globs['mkdups']:
             globs['iter-final-bam-log'] = os.path.join(globs['iterlogdir'], "picard-mkdup-iter-" + globs['iter-str'] + ".log");
             globs['iter-final-bam'] = os.path.join(globs['iterbamdir'], "merged-rg-mkdup-iter-" + globs['iter-str'] + ".bam.gz");
+            globs['iter-merged-bam'] = os.path.join(globs['iterbamdir'], "merged-iter-" + globs['iter-str'] + ".bam.gz");
         else:
             globs['iter-final-bam-log'] = os.path.join(globs['iterlogdir'], "picard-merge-bam-iter-" + globs['iter-str'] + ".log");
             globs['iter-final-bam'] = os.path.join(globs['iterbamdir'], "merged-iter-" + globs['iter-str'] + ".bam.gz");
@@ -146,10 +147,15 @@ def mapping(globs):
 
     if globs['bam'] and globs['iteration'] == 1:
         do_mapping = False;
+        do_map_merge = False;
     elif globs['resume']:
         do_mapping = PC.prevCheck(globs['iter-final-bam'], globs['iter-final-bam-log'], globs);
+        do_map_merge = True;
+        if globs['mkdups'] and os.path.isfile(globs['iter-merged-bam']):
+            do_map_merge = False;
     else:
         do_mapping = True;
+        do_map_merge = True;
     # Determine whether mapping needs to be done for this iteration. Depends on whether -resume or -bam are specified.
 
     if do_mapping:
@@ -214,22 +220,24 @@ def mapping(globs):
         globs, cmds = pimap.getRG(globs, cmds);
         # Get the read group information if it is the first iteration.
 
-        if globs['mapper'] == "bwa":
-            bamfiles, cmds = pimap.BWA(globs, cmds, cur_ref);
-        # If --mapper is bwa
-        if globs['mapper'] == "hisat2":
-            bamfiles, cmds = pimap.hisat2(globs, cmds, cur_ref);
-        # If --mapper is hisat2
-        # READ MAPPING
+        if do_map_merge:
+            if globs['mapper'] == "bwa":
+                bamfiles, cmds = pimap.BWA(globs, cmds, cur_ref);
+            # If --mapper is bwa
+            if globs['mapper'] == "hisat2":
+                bamfiles, cmds = pimap.hisat2(globs, cmds, cur_ref);
+            # If --mapper is hisat2
+            # READ MAPPING
 
-        #rg_bamfile, cmds = varprep.addRG(globs, cmds, bamfiles);
-        # ADD READ GROUPS.
-        # This is now done with the specified mapper.
+            #rg_bamfile, cmds = varprep.addRG(globs, cmds, bamfiles);
+            # ADD READ GROUPS.
+            # This is now done with the specified mapper.
 
-        merged_bamfile, cmds = pimap.mergeBam(globs, cmds, bamfiles);
-        # MERGE BAM FILES, also sorts
+            merged_bamfile, cmds = pimap.mergeBam(globs, cmds, bamfiles);
+            # MERGE BAM FILES, also sorts
         
         if globs['mkdups']:
+            merged_bamfile = globs['iter-merged-bam'];
             cmds = pimap.markDups(globs, cmds, merged_bamfile);
         # MARK DUPLICATES, also generates index for merged bam file.
         

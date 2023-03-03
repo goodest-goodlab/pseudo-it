@@ -1,5 +1,9 @@
 # These are the major changes and updates. For build specific changes (which are too numerous to document manually), check the commits on github.
 
+03.01.2023:
+- Added better checkpointing so reads aren't always re-mapped with `-resume` set
+- Fixed the default filter string to used bcftools' updated syntax (e.g. `~` instead of `=` for inexact matches); see: https://github.com/samtools/bcftools/releases/tag/1.11
+
 # TODO:
 
 # IN DEVELOPMENT:

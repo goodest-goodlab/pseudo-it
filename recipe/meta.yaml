@@ -1,6 +1,6 @@
 {% set name = "pseudo-it" %}
-{% set version = "1.0.0" %}
-{% set sha256 = "9d0946b061917dfaa74747eb20e8cd242d0450e94d5061db589b94eae5d5364e" %}
+{% set version = "3.0.0" %}
+{% set sha256 = "8b8558dcd19809f2d08e5de6ae54750b240809423a2c94be61b2e93028c78711" %}
 
 package:
   name: {{ name|lower }}

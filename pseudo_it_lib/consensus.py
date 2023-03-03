@@ -83,7 +83,7 @@ def genConsensus(globs, cmds, vcf_file, cur_ref):
         bcftools_cmd += " -c " + globs['iter-final-chain'];
     if globs['last-iter'] and globs['diploid']:
         bcftools_cmd += " -I ";
-    bcftools_cmd += " -e \"FILTER='pseudoit' || FILTER='IndelGap'\" " + vcf_file;
+    bcftools_cmd += " -e \"FILTER~'pseudoit' || FILTER~'IndelGap'\" " + vcf_file;
     cmds[bcftools_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Generating consensus", 'outfile' : globs['iter-final-fa'], 'logfile' : globs['iter-consensus-log'], 'start' : False };
 
     run_flag = True;

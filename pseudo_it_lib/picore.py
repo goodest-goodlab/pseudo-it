@@ -100,6 +100,8 @@ def execCheck(globs, a):
 		cmd_result = subprocess.run(globs[opt], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE);
 		# Run the provided command and retrieve the exit code.
 
+		#print(cmd_result);
+
 		if cmd_result.returncode > 1:
 		# If the exit code for the command run is greater than 1, the command isn't found.
 			dcheck_str[2] = "FAILED with exit code " + str(cmd_result.returncode);

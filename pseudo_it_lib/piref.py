@@ -135,8 +135,8 @@ def indexFa(globs, cmds, cur_ref):
                 index_files = [cur_ref + ".amb", cur_ref + ".ann", cur_ref + ".bwt", cur_ref + ".pac", cur_ref + ".sa"];
 
                 index_cmd = globs['mapper-path'] + " index " + cur_ref;
-                cmds[index_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create BWA reference index", 'outfile' : "", 'logfile' : cur_logfile, 'start' : False };
-                index_cmds[index_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create BWA reference index", 'outfile' : "", 'logfile' : cur_logfile, 'start' : False };
+                cmds[index_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create BWA reference index", 'outfile' : index_files[0], 'logfile' : cur_logfile, 'start' : False };
+                index_cmds[index_cmd] = { 'cmd-num' : PC.getCMDNum(globs, len(cmds)), 'desc' : "Create BWA reference index", 'outfile' : index_files[0], 'logfile' : cur_logfile, 'start' : False };
             # Create the reference index by running bwa index if --mapper is bwa
 
             elif globs['mapper'] == "hisat2":
