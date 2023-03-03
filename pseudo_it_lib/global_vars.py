@@ -53,6 +53,7 @@ def init():
         'mask' : 'soft',
         'in-vcf' : False,
         'filter-sites' : False,
+        'hisat-strandness' : False,
         # I/O options
         
         'mapper' : 'bwa',

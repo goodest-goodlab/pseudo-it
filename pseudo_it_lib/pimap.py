@@ -133,6 +133,8 @@ def hisat2(globs, cmds, cur_ref):
             hisat2_cmd += " -2 " + globs['libs'][lib_type].split(" ")[1];
         else:
             hisat2_cmd += " -U " + globs['libs'][lib_type];
+        if globs['hisat-strandness']:
+            hisat2_cmd += " --rna-strandness " + globs['hisat-strandness'];
         hisat2_cmd += " | " + globs['samtools-path'] + " sort";
         hisat2_cmd += " | " + globs['samtools-path'] + " view -bh -";
         hisat2_cmd += " > " + bamfile;
@@ -142,10 +144,10 @@ def hisat2(globs, cmds, cur_ref):
         cmd_num = PC.getCMDNum(globs, len(cmds));
         # Get the current command number for the log.
 
-        cmds[hisat2_cmd] = { 'cmd-num' : cmd_num, 'desc' : "BWA " + lib_type + " read mapping", 'outfile' : bamfile,  'logfile' : cur_logfile, 'start' : False };
+        cmds[hisat2_cmd] = { 'cmd-num' : cmd_num, 'desc' : "hisat2 " + lib_type + " read mapping", 'outfile' : bamfile,  'logfile' : cur_logfile, 'start' : False };
         # Save the hisat command to the global cmds dict.
 
-        hisat2_cmds[hisat2_cmd] = { 'cmd-num' : cmd_num, 'desc' : "BWA " + lib_type + " read mapping", 'logfile' : cur_logfile, 'start' : False };
+        hisat2_cmds[hisat2_cmd] = { 'cmd-num' : cmd_num, 'desc' : "hisat2 " + lib_type + " read mapping", 'logfile' : cur_logfile, 'start' : False };
         # Save the hisat2 command to the bwa_cmds dict.
     # Prepare the hisat2 commands for each fastq type
 
