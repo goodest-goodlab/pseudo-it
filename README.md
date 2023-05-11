@@ -16,7 +16,6 @@
 
 - [About](#about)
     - [Citation](#citation)
-    - [Version History](#version-history)
 - [Installation](#installation)
     - [Installing dependencies with conda](#installing-dependencies-with-conda)
     - [Verifying installation and dependencies](#verifying-installation-and-dependencies)
