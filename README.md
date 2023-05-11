@@ -2,12 +2,15 @@
 
 ## Pseudo-it: Reference-guided genome assembly with iterative mapping
 
-[![OS](https://goodest-goodlab.github.io/pseudo-it/img/osbadge.svg)](#Installation)
-[![Language](https://goodest-goodlab.github.io/pseudo-it/img/pybadge.svg)](https://www.python.org/)
-[![Build Status](https://travis-ci.org/goodest-goodlab/pseudo-it.svg?branch=master)](https://travis-ci.org/goodest-goodlab/pseudo-it)
+[![Install](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](https://bioconda.github.io/recipes/pseudo-it/README.html)
+[![OS](https://anaconda.org/bioconda/pseudo-it/badges/platforms.svg)](#pseudo-it-reference-guided-genome-assembly-with-iterative-mapping)
+[![Version](https://img.shields.io/conda/vn/bioconda/pseudo-it?label=version)](https://bioconda.github.io/recipes/pseudo-it/README.html)
+[![Release Date](https://anaconda.org/bioconda/pseudo-it/badges/latest_release_date.svg)](#pseudo-it-reference-guided-genome-assembly-with-iterative-mapping)
+[![Downloads](https://img.shields.io/conda/dn/bioconda/pseudo-it.svg?style=flat)](https://bioconda.github.io/recipes/pseudo-it/README.html)
 [![codecov](https://codecov.io/gh/goodest-goodlab/pseudo-it/branch/master/graph/badge.svg?token=3U2K65R611)](https://codecov.io/gh/goodest-goodlab/pseudo-it)
-![GitHub last commit](https://img.shields.io/github/last-commit/goodest-goodlab/pseudo-it)
 [![License](https://img.shields.io/github/license/goodest-goodlab/pseudo-it)](https://github.com/goodest-goodlab/pseudo-it/LICENSE)
+
+<!-- [![Build Status](https://travis-ci.org/goodest-goodlab/pseudo-it.svg?branch=master)](https://travis-ci.org/goodest-goodlab/pseudo-it) -->
 
 # Authors
 ### Gregg Thomas, Brice Sarver, and Jeff Good
