@@ -57,23 +57,11 @@ Each iteration should allow for more reads to be mapped and more variation to be
 
 #### Sarver BAJ, Keeble S, Cosart T, Tucker PK, Dead MD, Good JM. 2017. Phylogenomic insights into mouse evolution using a pseudoreference approach. Genome Biology and Evololution. https://doi.org/10.1093/gbe/evx034.
 
-## Version History
-#### This is version beta 3.1, released August 13, 2020
-
-Change log:
-* Restructured code to add modularity for easy incorporation of other read mappers or variant callers.
-* Now uses HaplotypeCaller from GATK4 for variant calling.
-* Now uses bcftools to generate the final consensus FASTA file, which allows the incorporation of indels and generates a chain file to preserve coordinate system from original reference.
-
 # Installation
 
 #### Pseudo-it is implemented in Python 3.
 
-Pseudo-it itself is simply a Python script that coordinates the running of other software.  Simply download the program and run it. You may want to add the pseudo-it folder to your $PATH variable for ease of use.
-
-## Installing dependencies with conda
-
-Pseudo-it runs a suite of common bioinformatics software to go from raw reads in FASTQ format with a reference assembly in FASTA format to a pseudo-assembly of the reads in FASTA format. These programs are:
+Pseudo-it itself is simply a Python script that coordinates the running of other software. As such, the only dependency of the script is Python 3, however pseudo-it runs a suite of common bioinformatics software to go from raw reads in FASTQ format with a reference assembly in FASTA format to a pseudo-assembly of the reads in FASTA format. These programs are:
 
 1. [BWA](http://bio-bwa.sourceforge.net/) for read mapping.
 2. [GATK](https://gatk.broadinstitute.org/hc/en-us) for variant calling.
@@ -82,33 +70,78 @@ Pseudo-it runs a suite of common bioinformatics software to go from raw reads in
 5. [bedtools](https://bedtools.readthedocs.io/en/latest/) for soft-masking FASTA files.
 6. [bcftools](http://samtools.github.io/bcftools/) for handling VCF files and generating consensus FASTA and .chain files.
 
-You will need each of these programs installed on your system to run pseudo-it. You can install them each individually, but they can also easily be installed from [bioconda](https://anaconda.org/bioconda), and we have provided the `pseudo-it.yml` pre-set environment to automatically install them.
-
-First, make sure Anaconda is installed on your system by following the instructions here: [Anaconda Download](https://www.anaconda.com/products/individual#download-section)
-
-Then, start Anaconda:
-    
-    source /path/to/anaconda3/bin/activate
-
-Load the environment:
-
-    conda env create --file pseudo-it.yml
-
-And finally, activate the environment:
-
-    conda activate pseudo-it
-
 Additionally, Pseudo-it relies on common *nix based commands such as `grep`/`zgrep` and `sed`. **As such, Pseudo-it can only be run on systems with those commands installed**
 
-## Verifying installation and dependencies
+## Two ways to install pseudo-it and its dependencies
 
-If you have added pseudo-it folder to your $PATH, you can run it from any location in your file system simply by typing `pseudo_it.py`.
+There are two ways to install pseudo-it and its dependencies. BOTH require the use of the [conda package manager](https://docs.conda.io/en/latest/) or the speedier solver, [mamba](https://mamba.readthedocs.io/en/latest/user_guide/mamba.html)
 
-Without adding it to your $PATH you will need to explicitly invoke python and provide the full path to the pseudo_it.py interface script:
+### 0. Install and set-up conda (REQUIRED for both options below)
 
-    python /path/to/pseudo-it/pseudo_it.py
+To set these up, do the following:
+
+1. (Install conda)[https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html]
+
+2. (Optional) (Install mamba)[https://mamba.readthedocs.io/en/latest/installation.html] -- note that if you do this step, all subsequent commands where `conda` is used can be replaced with `mamba`.
+
+3. (Set-up your conda channels for bioconda)[https://bioconda.github.io/#usage]
+
+### 1. Install pseudo-it through bioconda (RECOMMENDED)
+
+With conda activated,
+
+1. Create a new enviornment for pseudo-it:
+
+```bash
+conda create -n pseudo-it-env
+```
+
+2. Activate the `pseudo-it-env` environment:
+
+```bash
+conda activate pseudo-it-env
+```
+
+3. Install the pseudo-it package:
+
+
+```bash
+conda install pseudo-it
+```
+
+This will install the pseudo-it script as well as all the dependencies listed above. Now you can run pseudo-it as follows:
+
+```bash
+python pseudo_it.py -h
+```
+
+### 2. Install pseudo-it from github and dependencies with conda
+
+1. Since pseudo-it itself is just a python script, you can download it directly from this github either by clicking the green **Code** button above and copying the link to `git clone` the repo, or by downloading the release on the right. Once downloaded, you may want to add this folder to your `$PATH` variable so you don't have to type the full path to the script every time you run it.
+
+2. For the dependencies, we have provided an environment file (`pseudo-it.yml`) that will automatically download and install them from bioconda. First, load the environment:
+
+```bash
+conda env create --file pseudo-it.yml
+```
+
+3. Activate the newly created environment:
+
+```bash
+conda activate pseudo-it
+```
+
+4. Confirm the dependencies have been installed:
+
+```bash
+python /PATH/TO/pseudo_it.py --depcheck
+```
+
+Here, the path to the pseudo_it.py script is wherever you downloaded it to in step 1. If you added the pseudo-it folder to your `$PATH` variable, you can just call it as `python pseudo_it.py`.
 
 **All subsequent command examples assume you have added the pseudo-it folder to your $PATH**
+
+## Verifying installation and dependencies
 
 ### Testing the pseudo-it interface:
 
@@ -156,37 +189,37 @@ Note that only one of `-se`, `-pe1` and `-pe2`, or `-pem` is required, but any c
 
 | Option | Description | 
 | ------ | ----------- |
-| -ref [FASTA file] | A FASTA formatted file containing the genome you wish to map reads to in the first iteration. |
-| -se [FASTQ file] | A FASTQ file containing single-end reads. |
-| -pe1 [FASTQ file] | A FASTQ file containing pair 1 of paired-end reads. |
-| -pe2 [FASTQ file] | A FASTQ file containing pair 2 of paired-end reads. | 
-| -pem [FASTQ file] | A FASTQ file containing merged paired-end reads. |
-| -bam [BAM file] | OPTIONAL: A BAM file with the reads provided in `-se`, `-pe1` and `-pe2`, and/or `-pem` already mapped to the reference assembly. |
-| -f "[STRING]" | The expression to filter variants. Must conform to VCF INFO field standards. See [bcftools expressions](https://samtools.github.io/bcftools/bcftools.html#expressions) for more info. Default read depth filters are optimized for a 30-40X sequencing run -- adjust for your assembly. Default: `"MQ < 30.0 \|\| DP < 5 \|\| DP > 60"`
-| -i [INT] | The number of iterations of pseudo-it to run. Default: 4 |
-| -o [directory name] | The desired output directory. This will be created for you if it doesn't exist. Default: `pseudoit-out-[date]-[time]`. One of `-o` or `-resume` must be provided. |
-| -resume [directory name] | The path to a previous Pseudo-it directory to resume a run. Scans for presence of files and resumes when it can't find an expected file. One of `-o` or `-resume` must be provided. |
-| -tmp [directory name] | OPTIONAL: Some programs write files to a temporary directory. If your default tmp dir is size limited, specify a new one here, or just specifiy 'tmp-pi-out' to have a folder called 'tmp' created and used within the main output folder. |
-| -p [INT] | The MAX number of processes Pseudo-it can use. It is highly recommended to run this with multiple processes. See [Resource allocation](#Resource-allocation) for more detail. |
-| -bwa-t [INT] | The number of threads for BWA mem to use for each FASTQ library. See [Resource allocation](#Resource-allocation) for more detail. Default: 1. |
-| -gatk-t [INT] | The number of threads for GATK's Haplotype caller to use. See [Resource allocation](#Resource-allocation) for more detail. Default: 4. |
-| -bwa [PATH STRING] | The path to the BWA mapping progam. Default: bwa |
-| -picard [PATH STRING] | The exact command used to run picard. For a jar file: `java -jar [full path to jar file]`. For an alias or conda install: picard. Include heap size in command if necessary, i.e. `-Xmx6g`. Default: picard |
-| -samtools [PATH STRING] | The path to the samtools progam. Default: samtools |
-| -gatk [PATH STRING] | The path to the GATK progam. Default: gatk |
-| -bedtools [PATH STRING] | The path to the bedtools progam. Default: bedtools |
-| -bcftools [PATH STRING] | The path to the bcftools progam. Default: bcftools |
-| --depcheck | Check that all dependencies can be executed from within pseudo-it. Paths can be provided with the option for each program, or left as default. |
-| --dryrun | Run through all of the commands that would be run with the given inputs. Good to run to setup output directories and make sure pseudo-it will behave how you want it to. |
-| --maponly | Only do one iteration and stop after read mapping. |
-| --noindels | Set this to not incorporate indels into the final assembly. |
-| --diploid | Set this use IUPAC ambiguity codes in the final FASTA file. |
-| --keepall | By default, pseudo-it keeps only the final files for each step of each iteration (BAM, VCF, FASTA and their respective indices). Set this option to keep all intermediate files. While this is the best way to ensure your runs can be resumed with different settings this will result many large files being saved (total of ~1TB for a 30X genome and 4 iterations). |
-| --keeponlyfinal | By default, pseudo-it keeps only the final files for each step of each iteration (BAM, VCF, FASTA and their respective indices). Set this option to keep these files ONLY for the final iteration. While this minimizes storage space required, you will be unable to resume this run. |
-| --overwrite | Set this to overwrite existing files (as opposed to -resume which skips steps that have files already writen). |
-| --quiet | Set this flag to prevent psuedo-it from reporting detailed information about each step. |
-| --version | Simply print the version and exit. Can also be called as `-version`, `-v`, or `--v`. |
-| -h | Print a help menu and exit. Can also be called as `--help`. |
+| `-ref [FASTA file]` | A FASTA formatted file containing the genome you wish to map reads to in the first iteration. |
+| `-se [FASTQ file]` | A FASTQ file containing single-end reads. |
+| `-pe1 [FASTQ file]` | A FASTQ file containing pair 1 of paired-end reads. |
+| `-pe2 [FASTQ file]` | A FASTQ file containing pair 2 of paired-end reads. | 
+| `-pem [FASTQ file]` | A FASTQ file containing merged paired-end reads. |
+| `-bam [BAM file]` | OPTIONAL: A BAM file with the reads provided in `-se`, `-pe1` and `-pe2`, and/or `-pem` already mapped to the reference assembly. |
+| `-f "[STRING]"` | The expression to filter variants. Must conform to VCF INFO field standards. See [bcftools expressions](https://samtools.github.io/bcftools/bcftools.html#expressions) for more info. Default read depth filters are optimized for a 30-40X sequencing run -- adjust for your assembly. Default: `"MQ < 30.0 \|\| DP < 5 \|\| DP > 60"`
+| `-i [INT]` | The number of iterations of pseudo-it to run. Default: 4 |
+| `-o [directory name]` | The desired output directory. This will be created for you if it doesn't exist. Default: `pseudoit-out-[date]-[time]`. One of `-o` or `-resume` must be provided. |
+| `-resume [directory name]` | The path to a previous Pseudo-it directory to resume a run. Scans for presence of files and resumes when it can't find an expected file. One of `-o` or `-resume` must be provided. |
+| `-tmp [directory name]` | OPTIONAL: Some programs write files to a temporary directory. If your default tmp dir is size limited, specify a new one here, or just specifiy 'tmp-pi-out' to have a folder called 'tmp' created and used within the main output folder. |
+| `-p [INT]` | The MAX number of processes Pseudo-it can use. It is highly recommended to run this with multiple processes. See [Resource allocation](#Resource-allocation) for more detail. |
+| `-bwa-t [INT]` | The number of threads for BWA mem to use for each FASTQ library. See [Resource allocation](#Resource-allocation) for more detail. Default: 1. |
+| `-gatk-t [INT]` | The number of threads for GATK's Haplotype caller to use. See [Resource allocation](#Resource-allocation) for more detail. Default: 4. |
+| `-bwa [PATH STRING]` | The path to the BWA mapping progam. Default: bwa |
+| `-picard [PATH STRING]` | The exact command used to run picard. For a jar file: `java -jar [full path to jar file]`. For an alias or conda install: picard. Include heap size in command if necessary, i.e. `-Xmx6g`. Default: picard |
+| `-samtools [PATH STRING]` | The path to the samtools progam. Default: samtools |
+| `-gatk [PATH STRING]` | The path to the GATK progam. Default: gatk |
+| `-bedtools [PATH STRING]` | The path to the bedtools progam. Default: bedtools |
+| `-bcftools [PATH STRING]` | The path to the bcftools progam. Default: bcftools |
+| `--depcheck` | Check that all dependencies can be executed from within pseudo-it. Paths can be provided with the option for each program, or left as default. |
+| `--dryrun` | Run through all of the commands that would be run with the given inputs. Good to run to setup output directories and make sure pseudo-it will behave how you want it to. |
+| `--maponly` | Only do one iteration and stop after read mapping. |
+| `--noindels` | Set this to not incorporate indels into the final assembly. |
+| `--diploid` | Set this use IUPAC ambiguity codes in the final FASTA file. |
+| `--keepall` | By default, pseudo-it keeps only the final files for each step of each iteration (BAM, VCF, FASTA and their respective indices). Set this option to keep all intermediate files. While this is the best way to ensure your runs can be resumed with different settings this will result many large files being saved (total of ~1TB for a 30X genome and 4 iterations). |
+| `--keeponlyfinal` | By default, pseudo-it keeps only the final files for each step of each iteration (BAM, VCF, FASTA and their respective indices). Set this option to keep these files ONLY for the final iteration. While this minimizes storage space required, you will be unable to resume this run. |
+| `--overwrite` | Set this to overwrite existing files (as opposed to -resume which skips steps that have files already writen). |
+| `--quiet` | Set this flag to prevent psuedo-it from reporting detailed information about each step. |
+| `--version` | Simply print the version and exit. Can also be called as `-version`, `-v`, or `--v`. |
+| `-h` | Print a help menu and exit. Can also be called as `--help`. |
 
 ## Pre-indexing your reference genome
 
