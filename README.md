@@ -18,8 +18,6 @@
 # Table of Contents
 
 - [About](#about)
-    - [Citation](#citation)
-    - [Acknowledgements](#acknowledgements)
 - [Installation](#installation)
     - [Setting up conda](#0-install-and-set-up-conda-required-for-both-options-below)
     - [Installing pseudo-it from bioconda](#1-install-pseudo-it-through-bioconda-recommended)
@@ -31,6 +29,8 @@
     - [Resource allocation](#resource-allocation)
     - [Example commands](#example-commands)
 - [FAQs](#faqs)
+- [Citation](#citation)
+- [Acknowledgements](#acknowledgements)
 
 # About
 
@@ -55,16 +55,6 @@ Each iteration should allow for more reads to be mapped and more variation to be
 #### What follows is a brief explanation of the options.
 
 #### This is an update of version 2 of the software, found here: https://github.com/bricesarver/pseudo-it
-
-## Citation
-
-#### Sarver BAJ, Keeble S, Cosart T, Tucker PK, Dead MD, Good JM. 2017. Phylogenomic insights into mouse evolution using a pseudoreference approach. Genome Biology and Evololution. https://doi.org/10.1093/gbe/evx034.
-
-## Acknowledgements
-
-This material is based upon work supported by the National Science Foundation under Grant Number (DEB 1754096).
-
-Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
 
 # Installation
 
@@ -289,3 +279,13 @@ This command adds the `gatk-t 1` option to reduce the number of threads for Hapl
 **How many iterations should I perform?**
 
 This depends on the sequence divergence of your sample relative to your reference and the type of data you have. For exome data, I found that three iterations performs well for samples with ~7.5 million years of divergence. If you expect more or have quickly evolving loci (noncoding, etc.), you might need more.
+
+# Citation
+
+#### Sarver BAJ, Keeble S, Cosart T, Tucker PK, Dead MD, Good JM. 2017. Phylogenomic insights into mouse evolution using a pseudoreference approach. Genome Biology and Evololution. https://doi.org/10.1093/gbe/evx034.
+
+# Acknowledgements
+
+This material is based upon work supported by the National Science Foundation under Grant Number (DEB 1754096).
+
+Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
