@@ -11,6 +11,7 @@ example-data/example-out*/
 *.code-workspace
 .vscode/
 simulations/
+support/
 
 regions-test/PSEUDOIT_OUTPUT_BIK/*
 

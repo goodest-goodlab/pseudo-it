@@ -19,6 +19,7 @@
 
 - [About](#about)
     - [Citation](#citation)
+    - [Acknowledgements](#acknowledgements)
 - [Installation](#installation)
     - [Setting up conda](#0-install-and-set-up-conda-required-for-both-options-below)
     - [Installing pseudo-it from bioconda](#1-install-pseudo-it-through-bioconda-recommended)
@@ -58,6 +59,12 @@ Each iteration should allow for more reads to be mapped and more variation to be
 ## Citation
 
 #### Sarver BAJ, Keeble S, Cosart T, Tucker PK, Dead MD, Good JM. 2017. Phylogenomic insights into mouse evolution using a pseudoreference approach. Genome Biology and Evololution. https://doi.org/10.1093/gbe/evx034.
+
+## Acknowledgements
+
+This material is based upon work supported by the National Science Foundation under Grant Number (DEB 1754096).
+
+Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
 
 # Installation
 
